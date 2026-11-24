@@ -12,42 +12,47 @@ use App\Http\Controllers\Auth\SocialiteController;
 use App\Http\Controllers\Auth\VerifyEmailController;
 use Illuminate\Support\Facades\Route;
 
+/*
+|--------------------------------------------------------------------------
+| Auth Routes — allSolution style
+|--------------------------------------------------------------------------
+| One Route::controller() group per controller. URIs, methods, names
+| and middleware are unchanged from the old (Breeze-based) code.
+*/
+
 Route::middleware('guest:web')->group(function () {
-    Route::get('register', [RegisteredUserController::class, 'create'])
-        ->name('register');
+    // Registration
+    Route::controller(RegisteredUserController::class)->group(function () {
+        Route::get('register', 'create')->name('register');
+        Route::post('register', 'store');
+        Route::get('user-verification/{token}', 'custom_user_verification')->name('user-verification');
+    });
 
-    Route::post('register', [RegisteredUserController::class, 'store']);
+    // Login
+    Route::controller(AuthenticatedSessionController::class)->group(function () {
+        Route::get('login', 'create')->name('login');
+        Route::post('user-login', 'store')->name('user-login');
+    });
 
-    Route::get('login', [AuthenticatedSessionController::class, 'create'])
-        ->name('login');
+    // Password reset
+    Route::controller(PasswordResetLinkController::class)->group(function () {
+        Route::get('forgot-password', 'create')->name('password.request');
+        Route::post('forgot-password', 'store')->name('password.email');
+        Route::post('forget-password', 'custom_forget_password')->name('forget-password');
+    });
 
-    Route::post('user-login', [AuthenticatedSessionController::class, 'store'])->name('user-login');
+    Route::controller(NewPasswordController::class)->group(function () {
+        Route::get('reset-password/{token}', 'create')->name('password.reset');
+        Route::post('reset-password', 'store')->name('password.store');
+        Route::get('reset-password-page/{token}', 'custom_reset_password_page')->name('reset-password-page');
+        Route::post('reset-password-store/{token}', 'custom_reset_password_store')->name('reset-password-store');
+    });
 
-    Route::get('forgot-password', [PasswordResetLinkController::class, 'create'])
-        ->name('password.request');
-
-    Route::post('forgot-password', [PasswordResetLinkController::class, 'store'])
-        ->name('password.email');
-
-    Route::get('reset-password/{token}', [NewPasswordController::class, 'create'])
-        ->name('password.reset');
-
-    Route::post('reset-password', [NewPasswordController::class, 'store'])
-        ->name('password.store');
-
-    Route::post('/forget-password', [PasswordResetLinkController::class, 'custom_forget_password'])->name('forget-password');
-
-    Route::get('/reset-password-page/{token}', [NewPasswordController::class, 'custom_reset_password_page'])->name('reset-password-page');
-
-    Route::post('/reset-password-store/{token}', [NewPasswordController::class, 'custom_reset_password_store'])->name('reset-password-store');
-
-    Route::get('/user-verification/{token}', [RegisteredUserController::class, 'custom_user_verification'])->name('user-verification');
-
+    // Social login
     Route::controller(SocialiteController::class)->group(function () {
         Route::get('auth/{driver}', 'redirectToDriver')->name('auth.social');
         Route::get('auth/{driver}/callback', 'handleDriverCallback')->name('auth.social.callback');
     });
-
 });
 
 Route::middleware('auth')->group(function () {
@@ -62,13 +67,17 @@ Route::middleware('auth')->group(function () {
         ->middleware('throttle:6,1')
         ->name('verification.send');
 
-    Route::get('confirm-password', [ConfirmablePasswordController::class, 'show'])
-        ->name('password.confirm');
+    // Confirm password
+    Route::controller(ConfirmablePasswordController::class)->group(function () {
+        Route::get('confirm-password', 'show')->name('password.confirm');
+        Route::post('confirm-password', 'store');
+    });
 
-    Route::post('confirm-password', [ConfirmablePasswordController::class, 'store']);
+    Route::controller(PasswordController::class)->group(function () {
+        Route::put('password', 'update')->name('password.update');
+    });
 
-    Route::put('password', [PasswordController::class, 'update'])->name('password.update');
-
-    Route::post('logout', [AuthenticatedSessionController::class, 'destroy'])
-        ->name('logout');
+    Route::controller(AuthenticatedSessionController::class)->group(function () {
+        Route::post('logout', 'destroy')->name('logout');
+    });
 });

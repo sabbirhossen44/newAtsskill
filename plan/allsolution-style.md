@@ -712,3 +712,27 @@ Copy verbatim (versions as in allSolution `dev`):
   dependency set is **not** reused; keep `bootstrap ^5.3.8` (vendored into
   `public/assets/vendor/` as in allSolution, or via npm) plus
   `laravel-vite-plugin` only if a Vite build is wanted at all.
+
+## 14. Route grouping applied in the rebuild (2026-11-24)
+
+`routes/` in `sabbirhossen44/newAtsskill` follows this guide's §4/§10
+conventions — one `Route::controller(XController::class)->group(...)` per
+resource, grouped by area (public / student / instructor / checkout &
+payment / admin / auth / api), inside a single
+`Route::prefix('admin')->name('admin.')` wrapper for admin routes.
+Explicit routes only: every `Route::resource` from the old code was
+expanded by hand (`index` / `create` / `store` / `show` / `edit` /
+`update` via `Route::match(['put','patch'], …)` / `destroy`, plus
+`status-update` and `bulk` where the old code had them), and
+`->withTrashed()` is used where allSolution uses it. Verified by
+diffing `php artisan route:list` before/after: 250 routes, identical
+(method, URI, name, action, middleware). Two deliberate deviations,
+kept so no route behaviour changes:
+
+- Admin guest routes (login / store-login / logout / forgot-password /
+  reset-password) have **no** `guest:admin` middleware, unlike
+  allSolution's `routes/admin.php` — the old code had none either.
+- `routes/admin.php` and `routes/auth.php` are loaded by
+  `bootstrap/app.php` (`then:` closure, `web` middleware group), not
+  `require`d from `routes/web.php` (the old double registration was
+  harmless but is removed).

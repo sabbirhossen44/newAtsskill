@@ -31,256 +31,309 @@ use App\Http\Controllers\Global\CloudStorageController;
 use App\Http\Controllers\LandingPageController;
 use Illuminate\Support\Facades\Route;
 
-Route::group(['middleware' => 'maintenance.mode'], function () {
+/*
+|--------------------------------------------------------------------------
+| Web Routes — allSolution style
+|--------------------------------------------------------------------------
+| One Route::controller() group per controller, grouped by area
+| (public / student / instructor / checkout & payment). Explicit
+| routes only — no Route::resource (see plan/allsolution-style.md §4).
+| URIs, methods, names and middleware are unchanged from the old code.
+|
+| Note: routes/admin.php and routes/auth.php are loaded by
+| bootstrap/app.php (web middleware group), not required here.
+*/
 
-    /*
-     * =========================================================================
-     * Global Routes
-     * =========================================================================
-     */
+Route::middleware('maintenance.mode')->group(function () {
 
-    Route::get('set-language', [DashboardController::class, 'setLanguage'])->name('set-language');
-    Route::get('set-currency', [HomePageController::class, 'setCurrency'])->name('set-currency');
-
-    Route::get('/', [HomePageController::class, 'index'])->name('home');
-
-    Route::get('countries', [HomePageController::class, 'countries'])->name('countries');
-    Route::get('states/{country_id}', [HomePageController::class, 'states'])->name('states');
-    Route::get('cities/{state_id}', [HomePageController::class, 'cities'])->name('cities');
-
-    /** become a instructor */
-    Route::get('become-instructor', [BecomeInstructorController::class, 'index'])->name('become-instructor')->middleware('auth');
-    Route::post('become-instructor', [BecomeInstructorController::class, 'store'])->name('become-instructor.create')->middleware('auth');
-
-    Route::get('courses', [CoursePageController::class, 'index'])->name('courses');
-    Route::get('fetch-courses', [CoursePageController::class, 'fetchCourses'])->name('fetch-courses');
-    Route::get('course/{slug}', [CoursePageController::class, 'show'])->name('course.show');
-
-    /** cart routes */
-    Route::get('cart', [CartController::class, 'index'])->name('cart');
-    Route::post('add-to-cart/{id}', [CartController::class, 'addToCart'])->name('add-to-cart');
-    Route::get('buy-now/{slug}', [CartController::class, 'buyNow'])->name('buy-now');
-    Route::get('remove-cart-item/{rowId}', [CartController::class, 'removeCartItem'])->name('remove-cart-item');
-    Route::post('apply-coupon', [CartController::class, 'applyCoupon'])->name('apply-coupon');
-    Route::get('remove-coupon', [CartController::class, 'removeCoupon'])->name('remove-coupon');
-
-    /** Blog Routes */
-    Route::get('blog', [BlogController::class, 'index'])->name('blogs');
-    Route::get('blog/{slug}', [BlogController::class, 'show'])->name('blog.show');
-    Route::post('blog/submit-comment', [BlogController::class, 'submitComment'])->name('blog.submit-comment');
-    Route::get('all-instructors', [HomePageController::class, 'allInstructors'])->name('all-instructors');
-    Route::get('instructor-details/{id}/{slug?}', [HomePageController::class, 'instructorDetails'])->name('instructor-details');
-    Route::post('quick-connect/{id}', [HomePageController::class, 'quickConnect'])->name('quick-connect');
-
-    /** About page routes */
-    Route::get('about-us', [AboutPageController::class, 'index'])->name('about-us');
-    /** Contact page routes */
-    Route::get('contact', [ContactController::class, 'index'])->name('contact.index');
-    Route::post('contact/send-mail', [ContactController::class, 'sendMail'])->name('contact.send-mail');
-
-    /** Newsletter (new route: old module route was newsletter-request) */
-    Route::post('newsletter/subscribe', [NewsletterController::class, 'subscribe'])->name('newsletter.subscribe');
-    Route::get('newsletter-verification/{token}', [NewsletterController::class, 'verify'])->name('newsletter.verification');
-
-    Route::get('change-theme/{name}', [HomePageController::class, 'changeTheme'])->name('change-theme');
-
-    /*
-     * =========================================================================
-     * Student Dashboard Routes
-     * =========================================================================
-     */
-
-    Route::group(['middleware' => ['auth', 'verified'], 'prefix' => 'student', 'as' => 'student.'], function () {
-        Route::get('dashboard', [StudentDashboardController::class, 'index'])->name('dashboard');
-        // Profile setting routes
-        Route::get('setting', [StudentProfileSettingController::class, 'index'])->name('setting.index');
-        Route::put('setting/profile', [StudentProfileSettingController::class, 'updateProfile'])->name('setting.profile.update');
-        Route::put('setting/bio', [StudentProfileSettingController::class, 'updateBio'])->name('setting.bio.update');
-        Route::put('setting/password', [StudentProfileSettingController::class, 'updatePassword'])->name('setting.password.update');
-        Route::get('setting/experience-modal', [StudentProfileSettingController::class, 'showExperienceModal'])->name('setting.experience-modal');
-        Route::get('setting/edit-experience-modal/{id}', [StudentProfileSettingController::class, 'editExperienceModal'])->name('setting.edit-experience-modal');
-
-        Route::post('setting/experience', [StudentProfileSettingController::class, 'storeExperience'])->name('setting.experience.store');
-        Route::put('setting/experience/{id}', [StudentProfileSettingController::class, 'updateExperience'])->name('setting.experience.update');
-        Route::delete('setting/experience/{id}', [StudentProfileSettingController::class, 'destroyExperience'])->name('setting.experience.destroy');
-
-        Route::get('setting/add-education-modal', [StudentProfileSettingController::class, 'addEducationModal'])->name('setting.add-education-modal');
-        Route::post('setting/education', [StudentProfileSettingController::class, 'storeEducation'])->name('setting.education.store');
-        Route::get('setting/edit-education-modal/{id}', [StudentProfileSettingController::class, 'editEducationModal'])->name('setting.edit-education-modal');
-        Route::put('setting/education/{id}', [StudentProfileSettingController::class, 'updateEducation'])->name('setting.education.update');
-        Route::delete('setting/education/{id}', [StudentProfileSettingController::class, 'destroyEducation'])->name('setting.education.destroy');
-
-        Route::put('setting/address', [StudentProfileSettingController::class, 'updateAddress'])->name('setting.address.update');
-        Route::put('setting/socials', [StudentProfileSettingController::class, 'updateSocials'])->name('setting.socials.update');
-
-        /** Order Routes */
-        Route::get('orders', [StudentOrderController::class, 'index'])->name('orders.index');
-        Route::get('order-details/{id}', [StudentOrderController::class, 'show'])->name('order.show');
-        Route::get('order/invoice/{id}', [StudentOrderController::class, 'printInvoice'])->name('order.print-invoice');
-
-        Route::get('reviews', [StudentReviewController::class, 'index'])->name('reviews.index');
-        Route::get('reviews/{id}', [StudentReviewController::class, 'show'])->name('reviews.show');
-        Route::delete('reviews/{id}', [StudentReviewController::class, 'destroy'])->name('reviews.destroy');
-        Route::get('enrolled-courses', [StudentDashboardController::class, 'enrolledCourses'])->name('enrolled-courses');
-        Route::get('quiz-attempts', [StudentDashboardController::class, 'quizAttempts'])->name('quiz-attempts');
-
-        /** learning routes */
-        Route::get('learning/{slug}', [LearningController::class, 'index'])->name('learning.index');
-        Route::post('learning/get-file-info', [LearningController::class, 'getFileInfo'])->name('get-file-info');
-        Route::post('learning/make-lesson-complete', [LearningController::class, 'makeLessonComplete'])->name('make-lesson-complete');
-        Route::get('learning/resource-download/{id}', [LearningController::class, 'downloadResource'])->name('download-resource');
-
-        Route::get('learning/quiz/{id}', [LearningController::class, 'quizIndex'])->name('quiz.index');
-        Route::post('learning/quiz/{id}', [LearningController::class, 'quizStore'])->name('quiz.store');
-        Route::get('learning/quiz-result/{id}/{result_id}', [LearningController::class, 'quizResult'])->name('quiz.result');
-        Route::get('learning/{slug}/{lesson_id}', [LearningController::class, 'liveSession'])->name('learning.live');
-
-        /** qna routes */
-        Route::post('create-question', [QnaController::class, 'create'])->name('qna.create');
-        Route::get('fetch-lesson-questions', [QnaController::class, 'fetchLessonQuestions'])->name('fetch-lesson-questions');
-        Route::post('create-reply', [QnaController::class, 'createReply'])->name('create-reply');
-        Route::get('fetch-replies', [QnaController::class, 'fetchReply'])->name('fetch-replies');
-
-        Route::delete('delete-question/{id}', [QnaController::class, 'destroyQuestion'])->name('destroy-question');
-        Route::delete('delete-reply/{id}', [QnaController::class, 'destroyReply'])->name('destroy-reply');
-
-        /** course review Routes */
-        Route::post('add-review', [LearningController::class, 'addReview'])->name('add-review');
-        Route::get('fetch-reviews/{course_id}', [LearningController::class, 'fetchReviews'])->name('fetch-reviews');
-
-        /** download certificate route */
-        Route::get('download-certificate/{id}', [StudentDashboardController::class, 'downloadCertificate'])->name('download-certificate');
-
-        /** download demo certificate route */
-        Route::get('download-demo-certificate', [StudentDashboardController::class, 'downloadDemoCertificate'])->name('download-demo-certificate');
+    // Public routes
+    Route::controller(DashboardController::class)->group(function () {
+        Route::get('set-language', 'setLanguage')->name('set-language');
     });
 
-    /*
-     * =========================================================================
-     * Instructor Dashboard Routes
-     * =========================================================================
-     */
-
-    Route::group(['middleware' => ['auth', 'verified', 'approved.instructor', 'role:instructor'], 'prefix' => 'instructor', 'as' => 'instructor.'], function () {
-        Route::get('dashboard', [InstructorDashboardController::class, 'index'])->name('dashboard');
-        // Profile setting routes
-        Route::get('zoom-setting', [InstructorLiveCredentialController::class, 'index'])->name('zoom-setting.index');
-        Route::put('zoom-setting', [InstructorLiveCredentialController::class, 'update'])->name('zoom-setting.update');
-        Route::get('jitsi-setting', [InstructorLiveCredentialController::class, 'jitsi_index'])->name('jitsi-setting.index');
-        Route::put('jitsi-setting', [InstructorLiveCredentialController::class, 'jitsi_update'])->name('jitsi-setting.update');
-        Route::get('setting', [InstructorProfileSettingController::class, 'index'])->name('setting.index');
-        Route::put('setting/profile', [InstructorProfileSettingController::class, 'updateProfile'])->name('setting.profile.update');
-        Route::put('setting/bio', [InstructorProfileSettingController::class, 'updateBio'])->name('setting.bio.update');
-        Route::put('setting/password', [InstructorProfileSettingController::class, 'updatePassword'])->name('setting.password.update');
-        Route::get('setting/experience-modal', [InstructorProfileSettingController::class, 'showExperienceModal'])->name('setting.experience-modal');
-        Route::get('setting/edit-experience-modal/{id}', [InstructorProfileSettingController::class, 'editExperienceModal'])->name('setting.edit-experience-modal');
-
-        Route::post('setting/experience', [InstructorProfileSettingController::class, 'storeExperience'])->name('setting.experience.store');
-        Route::put('setting/experience/{id}', [InstructorProfileSettingController::class, 'updateExperience'])->name('setting.experience.update');
-        Route::delete('setting/experience/{id}', [InstructorProfileSettingController::class, 'destroyExperience'])->name('setting.experience.destroy');
-
-        Route::get('setting/add-education-modal', [InstructorProfileSettingController::class, 'addEducationModal'])->name('setting.add-education-modal');
-        Route::post('setting/education', [InstructorProfileSettingController::class, 'storeEducation'])->name('setting.education.store');
-        Route::get('setting/edit-education-modal/{id}', [InstructorProfileSettingController::class, 'editEducationModal'])->name('setting.edit-education-modal');
-        Route::put('setting/education/{id}', [InstructorProfileSettingController::class, 'updateEducation'])->name('setting.education.update');
-        Route::delete('setting/education/{id}', [InstructorProfileSettingController::class, 'destroyEducation'])->name('setting.education.destroy');
-
-        Route::put('setting/payout', [InstructorProfileSettingController::class, 'updatePayout'])->name('setting.payout.update');
-
-        Route::put('setting/address', [InstructorProfileSettingController::class, 'updateAddress'])->name('setting.address.update');
-        Route::put('setting/socials', [InstructorProfileSettingController::class, 'updateSocials'])->name('setting.socials.update');
-
-        /** Course Routes */
-        Route::get('courses', [InstructorCourseController::class, 'index'])->name('courses.index');
-        Route::get('courses/create', [InstructorCourseController::class, 'create'])->name('courses.create');
-        Route::get('courses/create/{id}/step/{step?}', [InstructorCourseController::class, 'edit'])->name('courses.edit');
-        Route::get('courses/{id}/edit', [InstructorCourseController::class, 'editView'])->name('courses.edit-view');
-
-        Route::get('courses/get-filters/{category_id}', [InstructorCourseController::class, 'getFiltersByCategory'])->name('courses.get-filters');
-        Route::get('courses/get-instructors', [InstructorCourseController::class, 'getInstructors'])->name('courses.get-instructors');
-
-        Route::post('courses/create', [InstructorCourseController::class, 'store'])->name('courses.store');
-        Route::post('courses/update', [InstructorCourseController::class, 'update'])->name('courses.update');
-
-        /** Course content routes */
-        Route::post('course-chapter/{course_id?}/store', [CourseContentController::class, 'chapterStore'])->name('course-chapter.store');
-        Route::get('course-chapter/sorting/{course_id}', [CourseContentController::class, 'chapterSorting'])->name('course-chapter.sorting.index');
-        Route::get('course-chapter/edit/{chapter_id}', [CourseContentController::class, 'chapterEdit'])->name('course-chapter.edit');
-        Route::put('course-chapter/update/{chapter_id}', [CourseContentController::class, 'chapterUpdate'])->name('course-chapter.update');
-        Route::delete('course-chapter/delete/{chapter_id}', [CourseContentController::class, 'chapterDestroy'])->name('course-chapter.destroy');
-
-        Route::post('course-chapter/sorting/{course_id}', [CourseContentController::class, 'chapterSortingStore'])->name('course-chapter.sorting.store');
-        Route::get('course-chapter/lesson/create', [CourseContentController::class, 'lessonCreate'])->name('course-chapter.lesson.create');
-        Route::post('course-chapter/lesson/create', [CourseContentController::class, 'lessonStore'])->name('course-chapter.lesson.store');
-        Route::get('course-chapter/lesson/edit', [CourseContentController::class, 'lessonEdit'])->name('course-chapter.lesson.edit');
-
-        Route::post('course-chapter/lesson/update', [CourseContentController::class, 'lessonUpdate'])->name('course-chapter.lesson.update');
-        Route::delete('course-chapter/lesson/{chapter_item_id}/destroy', [CourseContentController::class, 'chapterLessonDestroy'])->name('course-chapter.lesson.destroy');
-        Route::post('course-chapter/lesson/sorting/{chapter_id}', [CourseContentController::class, 'sortLessons'])->name('course-chapter.lesson.sorting');
-
-        Route::get('course-chapter/quiz-question/create/{quiz_id}', [CourseContentController::class, 'createQuizQuestion'])->name('course-chapter.quiz-question.create');
-        Route::post('course-chapter/quiz-question/create/{quiz_id}', [CourseContentController::class, 'storeQuizQuestion'])->name('course-chapter.quiz-question.store');
-        Route::get('course-chapter/quiz-question/edit/{question_id}', [CourseContentController::class, 'editQuizQuestion'])->name('course-chapter quiz-question.edit');
-        Route::put('course-chapter/quiz-question/update/{question_id}', [CourseContentController::class, 'updateQuizQuestion'])->name('course-chapter.quiz-question.update');
-        Route::delete('course-chapter/quiz-question/delete/{question_id}', [CourseContentController::class, 'destroyQuizQuestion'])->name('course-chapter.quiz-question.destroy');
-        Route::get('course-delete-request/{course_id}', [InstructorCourseController::class, 'showDeleteRequest'])->name('course.delete-request.show');
-        Route::post('course-delete-request', [InstructorCourseController::class, 'sendDeleteRequest'])->name('course.send-delete-request');
-
-        /** payout routes */
-        Route::get('payout', [InstructorPayoutController::class, 'index'])->name('payout.index');
-        Route::get('payout/create', [InstructorPayoutController::class, 'create'])->name('payout.create');
-        Route::post('payout/create', [InstructorPayoutController::class, 'store'])->name('payout.store');
-        Route::delete('payout/delete/{id}', [InstructorPayoutController::class, 'destroy'])->name('payout.destroy');
-
-        /** announcement routes */
-        Route::resource('announcements', InstructorAnnouncementController::class);
-
-        /** my sales routes */
-        Route::get('my-sells', [InstructorDashboardController::class, 'mySells'])->name('my-sells.index');
-        /** lessons qna routes */
-        Route::get('lesson-question', [InstructorLessonQnaController::class, 'index'])->name('lesson-questions.index');
-        Route::post('lesson-question/{id}', [InstructorLessonQnaController::class, 'createReply'])->name('lesson-question.reply');
-        Route::delete('lesson-question/destroy/{id}', [InstructorLessonQnaController::class, 'destroyQuestion'])->name('lesson-question.destroy');
-        Route::delete('lesson-question/reply/destroy/{id}', [InstructorLessonQnaController::class, 'destroyReply'])->name('lesson-reply.destroy');
-        Route::put('lesson-question/seen-update/{id}', [InstructorLessonQnaController::class, 'markAsReadUnread'])->name('lesson-question.seen-update');
-
-        Route::post('cloud/store', [CloudStorageController::class, 'store'])->name('cloud.store');
+    Route::controller(HomePageController::class)->group(function () {
+        Route::get('/', 'index')->name('home');
+        Route::get('set-currency', 'setCurrency')->name('set-currency');
+        Route::get('countries', 'countries')->name('countries');
+        Route::get('states/{country_id}', 'states')->name('states');
+        Route::get('cities/{state_id}', 'cities')->name('cities');
+        Route::get('all-instructors', 'allInstructors')->name('all-instructors');
+        Route::get('instructor-details/{id}/{slug?}', 'instructorDetails')->name('instructor-details');
+        Route::post('quick-connect/{id}', 'quickConnect')->name('quick-connect');
+        Route::get('change-theme/{name}', 'changeTheme')->name('change-theme');
     });
 
-    Route::group(['middleware' => ['auth', 'verified']], function () {
-        /** checkout routes */
-        Route::get('checkout', [CheckOutController::class, 'index'])->name('checkout.index');
+    // Become an instructor
+    Route::controller(BecomeInstructorController::class)->group(function () {
+        Route::get('become-instructor', 'index')->name('become-instructor')->middleware('auth');
+        Route::post('become-instructor', 'store')->name('become-instructor.create')->middleware('auth');
+    });
 
-        /**payment related route start */
-        Route::get('payment', [PaymentController::class, 'payment'])->name('payment');
-        Route::post('pay-via-stripe', [PaymentController::class, 'pay_via_stripe'])->name('pay-via-stripe');
-        Route::get('pay-via-paypal', [PaymentController::class, 'pay_via_paypal'])->name('pay-via-paypal');
-        Route::post('pay-via-bank', [PaymentController::class, 'pay_via_bank'])->name('pay-via-bank');
-        Route::post('pay-via-razorpay', [PaymentController::class, 'pay_via_razorpay'])->name('pay-via-razorpay');
-        Route::get('pay-via-mollie', [PaymentController::class, 'pay_via_mollie'])->name('pay-via-mollie');
-        Route::get('pay-via-instamojo', [PaymentController::class, 'pay_via_instamojo'])->name('pay-via-instamojo');
-        Route::get('pay-via-uddoktapay', [PaymentController::class, 'pay_via_uddoktapay'])->name('pay-via-uddoktapay');
-        Route::post('pay-via-flutterwave', [PaymentController::class, 'pay_via_flutterwave'])->name('pay-via-flutterwave');
-        Route::post('pay-via-paystack', [PaymentController::class, 'pay_via_paystack'])->name('pay-via-paystack');
-        Route::post('pay-via-free-gateway', [PaymentController::class, 'pay_via_free_gateway'])->name('pay-via-free-gateway');
-        Route::get('/payment-addon-success', [PaymentController::class, 'payment_addon_success'])->name('payment-addon-success');
-        Route::get('/payment-addon-faild', [PaymentController::class, 'payment_addon_faild'])->name('payment-addon-faild');
-        Route::get('order-completed', [PaymentController::class, 'order_success'])->name('order-success');
-        Route::get('order-fail', [PaymentController::class, 'order_fail'])->name('order-fail');
+    // Courses
+    Route::controller(CoursePageController::class)->group(function () {
+        Route::get('courses', 'index')->name('courses');
+        Route::get('fetch-courses', 'fetchCourses')->name('fetch-courses');
+        Route::get('course/{slug}', 'show')->name('course.show');
+    });
 
-        Route::post('tinymce-upload-image', [TinymceImageUploadController::class, 'upload']);
-        Route::delete('tinymce-delete-image', [TinymceImageUploadController::class, 'destroy']);
+    // Cart
+    Route::controller(CartController::class)->group(function () {
+        Route::get('cart', 'index')->name('cart');
+        Route::post('add-to-cart/{id}', 'addToCart')->name('add-to-cart');
+        Route::get('buy-now/{slug}', 'buyNow')->name('buy-now');
+        Route::get('remove-cart-item/{rowId}', 'removeCartItem')->name('remove-cart-item');
+        Route::post('apply-coupon', 'applyCoupon')->name('apply-coupon');
+        Route::get('remove-coupon', 'removeCoupon')->name('remove-coupon');
+    });
+
+    // Blog
+    Route::controller(BlogController::class)->group(function () {
+        Route::get('blog', 'index')->name('blogs');
+        Route::get('blog/{slug}', 'show')->name('blog.show');
+        Route::post('blog/submit-comment', 'submitComment')->name('blog.submit-comment');
+    });
+
+    // About page
+    Route::controller(AboutPageController::class)->group(function () {
+        Route::get('about-us', 'index')->name('about-us');
+    });
+
+    // Contact page
+    Route::controller(ContactController::class)->group(function () {
+        Route::get('contact', 'index')->name('contact.index');
+        Route::post('contact/send-mail', 'sendMail')->name('contact.send-mail');
+    });
+
+    // Newsletter
+    Route::controller(NewsletterController::class)->group(function () {
+        Route::post('newsletter/subscribe', 'subscribe')->name('newsletter.subscribe');
+        Route::get('newsletter-verification/{token}', 'verify')->name('newsletter.verification');
+    });
+
+    // Student dashboard
+    Route::prefix('student')->name('student.')->middleware(['auth', 'verified'])->group(function () {
+        Route::controller(StudentDashboardController::class)->group(function () {
+            Route::get('dashboard', 'index')->name('dashboard');
+            Route::get('enrolled-courses', 'enrolledCourses')->name('enrolled-courses');
+            Route::get('quiz-attempts', 'quizAttempts')->name('quiz-attempts');
+            Route::get('download-certificate/{id}', 'downloadCertificate')->name('download-certificate');
+            Route::get('download-demo-certificate', 'downloadDemoCertificate')->name('download-demo-certificate');
+        });
+
+        // Profile settings
+        Route::controller(StudentProfileSettingController::class)->group(function () {
+            Route::get('setting', 'index')->name('setting.index');
+            Route::put('setting/profile', 'updateProfile')->name('setting.profile.update');
+            Route::put('setting/bio', 'updateBio')->name('setting.bio.update');
+            Route::put('setting/password', 'updatePassword')->name('setting.password.update');
+            Route::get('setting/experience-modal', 'showExperienceModal')->name('setting.experience-modal');
+            Route::get('setting/edit-experience-modal/{id}', 'editExperienceModal')->name('setting.edit-experience-modal');
+            Route::post('setting/experience', 'storeExperience')->name('setting.experience.store');
+            Route::put('setting/experience/{id}', 'updateExperience')->name('setting.experience.update');
+            Route::delete('setting/experience/{id}', 'destroyExperience')->name('setting.experience.destroy');
+            Route::get('setting/add-education-modal', 'addEducationModal')->name('setting.add-education-modal');
+            Route::post('setting/education', 'storeEducation')->name('setting.education.store');
+            Route::get('setting/edit-education-modal/{id}', 'editEducationModal')->name('setting.edit-education-modal');
+            Route::put('setting/education/{id}', 'updateEducation')->name('setting.education.update');
+            Route::delete('setting/education/{id}', 'destroyEducation')->name('setting.education.destroy');
+            Route::put('setting/address', 'updateAddress')->name('setting.address.update');
+            Route::put('setting/socials', 'updateSocials')->name('setting.socials.update');
+        });
+
+        // Orders
+        Route::controller(StudentOrderController::class)->group(function () {
+            Route::get('orders', 'index')->name('orders.index');
+            Route::get('order-details/{id}', 'show')->name('order.show');
+            Route::get('order/invoice/{id}', 'printInvoice')->name('order.print-invoice');
+        });
+
+        // Reviews
+        Route::controller(StudentReviewController::class)->group(function () {
+            Route::get('reviews', 'index')->name('reviews.index');
+            Route::get('reviews/{id}', 'show')->name('reviews.show');
+            Route::delete('reviews/{id}', 'destroy')->name('reviews.destroy');
+        });
+
+        // Learning
+        Route::controller(LearningController::class)->group(function () {
+            Route::get('learning/{slug}', 'index')->name('learning.index');
+            Route::post('learning/get-file-info', 'getFileInfo')->name('get-file-info');
+            Route::post('learning/make-lesson-complete', 'makeLessonComplete')->name('make-lesson-complete');
+            Route::get('learning/resource-download/{id}', 'downloadResource')->name('download-resource');
+            Route::get('learning/quiz/{id}', 'quizIndex')->name('quiz.index');
+            Route::post('learning/quiz/{id}', 'quizStore')->name('quiz.store');
+            Route::get('learning/quiz-result/{id}/{result_id}', 'quizResult')->name('quiz.result');
+            Route::get('learning/{slug}/{lesson_id}', 'liveSession')->name('learning.live');
+            Route::post('add-review', 'addReview')->name('add-review');
+            Route::get('fetch-reviews/{course_id}', 'fetchReviews')->name('fetch-reviews');
+        });
+
+        // Lesson Q&A
+        Route::controller(QnaController::class)->group(function () {
+            Route::post('create-question', 'create')->name('qna.create');
+            Route::get('fetch-lesson-questions', 'fetchLessonQuestions')->name('fetch-lesson-questions');
+            Route::post('create-reply', 'createReply')->name('create-reply');
+            Route::get('fetch-replies', 'fetchReply')->name('fetch-replies');
+            Route::delete('delete-question/{id}', 'destroyQuestion')->name('destroy-question');
+            Route::delete('delete-reply/{id}', 'destroyReply')->name('destroy-reply');
+        });
+    });
+
+    // Instructor dashboard
+    Route::prefix('instructor')->name('instructor.')->middleware(['auth', 'verified', 'approved.instructor', 'role:instructor'])->group(function () {
+        Route::controller(InstructorDashboardController::class)->group(function () {
+            Route::get('dashboard', 'index')->name('dashboard');
+            Route::get('my-sells', 'mySells')->name('my-sells.index');
+        });
+
+        // Live class credentials (Zoom / Jitsi)
+        Route::controller(InstructorLiveCredentialController::class)->group(function () {
+            Route::get('zoom-setting', 'index')->name('zoom-setting.index');
+            Route::put('zoom-setting', 'update')->name('zoom-setting.update');
+            Route::get('jitsi-setting', 'jitsi_index')->name('jitsi-setting.index');
+            Route::put('jitsi-setting', 'jitsi_update')->name('jitsi-setting.update');
+        });
+
+        // Profile settings
+        Route::controller(InstructorProfileSettingController::class)->group(function () {
+            Route::get('setting', 'index')->name('setting.index');
+            Route::put('setting/profile', 'updateProfile')->name('setting.profile.update');
+            Route::put('setting/bio', 'updateBio')->name('setting.bio.update');
+            Route::put('setting/password', 'updatePassword')->name('setting.password.update');
+            Route::get('setting/experience-modal', 'showExperienceModal')->name('setting.experience-modal');
+            Route::get('setting/edit-experience-modal/{id}', 'editExperienceModal')->name('setting.edit-experience-modal');
+            Route::post('setting/experience', 'storeExperience')->name('setting.experience.store');
+            Route::put('setting/experience/{id}', 'updateExperience')->name('setting.experience.update');
+            Route::delete('setting/experience/{id}', 'destroyExperience')->name('setting.experience.destroy');
+            Route::get('setting/add-education-modal', 'addEducationModal')->name('setting.add-education-modal');
+            Route::post('setting/education', 'storeEducation')->name('setting.education.store');
+            Route::get('setting/edit-education-modal/{id}', 'editEducationModal')->name('setting.edit-education-modal');
+            Route::put('setting/education/{id}', 'updateEducation')->name('setting.education.update');
+            Route::delete('setting/education/{id}', 'destroyEducation')->name('setting.education.destroy');
+            Route::put('setting/payout', 'updatePayout')->name('setting.payout.update');
+            Route::put('setting/address', 'updateAddress')->name('setting.address.update');
+            Route::put('setting/socials', 'updateSocials')->name('setting.socials.update');
+        });
+
+        // Courses (multi-step create / edit)
+        Route::controller(InstructorCourseController::class)->group(function () {
+            Route::get('courses', 'index')->name('courses.index');
+            Route::get('courses/create', 'create')->name('courses.create');
+            Route::get('courses/create/{id}/step/{step?}', 'edit')->name('courses.edit');
+            Route::get('courses/{id}/edit', 'editView')->name('courses.edit-view');
+            Route::get('courses/get-filters/{category_id}', 'getFiltersByCategory')->name('courses.get-filters');
+            Route::get('courses/get-instructors', 'getInstructors')->name('courses.get-instructors');
+            Route::post('courses/create', 'store')->name('courses.store');
+            Route::post('courses/update', 'update')->name('courses.update');
+            Route::get('course-delete-request/{course_id}', 'showDeleteRequest')->name('course.delete-request.show');
+            Route::post('course-delete-request', 'sendDeleteRequest')->name('course.send-delete-request');
+        });
+
+        // Course content (chapters / lessons / quiz)
+        Route::controller(CourseContentController::class)->group(function () {
+            Route::post('course-chapter/{course_id?}/store', 'chapterStore')->name('course-chapter.store');
+            Route::get('course-chapter/sorting/{course_id}', 'chapterSorting')->name('course-chapter.sorting.index');
+            Route::get('course-chapter/edit/{chapter_id}', 'chapterEdit')->name('course-chapter.edit');
+            Route::put('course-chapter/update/{chapter_id}', 'chapterUpdate')->name('course-chapter.update');
+            Route::delete('course-chapter/delete/{chapter_id}', 'chapterDestroy')->name('course-chapter.destroy');
+            Route::post('course-chapter/sorting/{course_id}', 'chapterSortingStore')->name('course-chapter.sorting.store');
+            Route::get('course-chapter/lesson/create', 'lessonCreate')->name('course-chapter.lesson.create');
+            Route::post('course-chapter/lesson/create', 'lessonStore')->name('course-chapter.lesson.store');
+            Route::get('course-chapter/lesson/edit', 'lessonEdit')->name('course-chapter.lesson.edit');
+            Route::post('course-chapter/lesson/update', 'lessonUpdate')->name('course-chapter.lesson.update');
+            Route::delete('course-chapter/lesson/{chapter_item_id}/destroy', 'chapterLessonDestroy')->name('course-chapter.lesson.destroy');
+            Route::post('course-chapter/lesson/sorting/{chapter_id}', 'sortLessons')->name('course-chapter.lesson.sorting');
+            Route::get('course-chapter/quiz-question/create/{quiz_id}', 'createQuizQuestion')->name('course-chapter.quiz-question.create');
+            Route::post('course-chapter/quiz-question/create/{quiz_id}', 'storeQuizQuestion')->name('course-chapter.quiz-question.store');
+            Route::get('course-chapter/quiz-question/edit/{question_id}', 'editQuizQuestion')->name('course-chapter quiz-question.edit');
+            Route::put('course-chapter/quiz-question/update/{question_id}', 'updateQuizQuestion')->name('course-chapter.quiz-question.update');
+            Route::delete('course-chapter/quiz-question/delete/{question_id}', 'destroyQuizQuestion')->name('course-chapter.quiz-question.destroy');
+        });
+
+        // Payouts
+        Route::controller(InstructorPayoutController::class)->group(function () {
+            Route::get('payout', 'index')->name('payout.index');
+            Route::get('payout/create', 'create')->name('payout.create');
+            Route::post('payout/create', 'store')->name('payout.store');
+            Route::delete('payout/delete/{id}', 'destroy')->name('payout.destroy');
+        });
+
+        // Announcements
+        Route::controller(InstructorAnnouncementController::class)->group(function () {
+            Route::get('announcements', 'index')->name('announcements.index');
+            Route::get('announcements/create', 'create')->name('announcements.create');
+            Route::post('announcements', 'store')->name('announcements.store');
+            Route::get('announcements/{announcement}', 'show')->name('announcements.show');
+            Route::get('announcements/{announcement}/edit', 'edit')->name('announcements.edit');
+            Route::match(['put', 'patch'], 'announcements/{announcement}', 'update')->name('announcements.update');
+            Route::delete('announcements/{announcement}', 'destroy')->name('announcements.destroy');
+        });
+
+        // Lesson Q&A
+        Route::controller(InstructorLessonQnaController::class)->group(function () {
+            Route::get('lesson-question', 'index')->name('lesson-questions.index');
+            Route::post('lesson-question/{id}', 'createReply')->name('lesson-question.reply');
+            Route::delete('lesson-question/destroy/{id}', 'destroyQuestion')->name('lesson-question.destroy');
+            Route::delete('lesson-question/reply/destroy/{id}', 'destroyReply')->name('lesson-reply.destroy');
+            Route::put('lesson-question/seen-update/{id}', 'markAsReadUnread')->name('lesson-question.seen-update');
+        });
+
+        // Cloud storage
+        Route::controller(CloudStorageController::class)->group(function () {
+            Route::post('cloud/store', 'store')->name('cloud.store');
+        });
+    });
+
+    // Checkout & payment (authenticated users)
+    Route::middleware(['auth', 'verified'])->group(function () {
+        Route::controller(CheckOutController::class)->group(function () {
+            Route::get('checkout', 'index')->name('checkout.index');
+        });
+
+        Route::controller(PaymentController::class)->group(function () {
+            Route::get('payment', 'payment')->name('payment');
+            Route::post('pay-via-stripe', 'pay_via_stripe')->name('pay-via-stripe');
+            Route::get('pay-via-paypal', 'pay_via_paypal')->name('pay-via-paypal');
+            Route::post('pay-via-bank', 'pay_via_bank')->name('pay-via-bank');
+            Route::post('pay-via-razorpay', 'pay_via_razorpay')->name('pay-via-razorpay');
+            Route::get('pay-via-mollie', 'pay_via_mollie')->name('pay-via-mollie');
+            Route::get('pay-via-instamojo', 'pay_via_instamojo')->name('pay-via-instamojo');
+            Route::get('pay-via-uddoktapay', 'pay_via_uddoktapay')->name('pay-via-uddoktapay');
+            Route::post('pay-via-flutterwave', 'pay_via_flutterwave')->name('pay-via-flutterwave');
+            Route::post('pay-via-paystack', 'pay_via_paystack')->name('pay-via-paystack');
+            Route::post('pay-via-free-gateway', 'pay_via_free_gateway')->name('pay-via-free-gateway');
+            Route::get('payment-addon-success', 'payment_addon_success')->name('payment-addon-success');
+            Route::get('payment-addon-faild', 'payment_addon_faild')->name('payment-addon-faild');
+            Route::get('order-completed', 'order_success')->name('order-success');
+            Route::get('order-fail', 'order_fail')->name('order-fail');
+        });
+
+        Route::controller(TinymceImageUploadController::class)->group(function () {
+            Route::post('tinymce-upload-image', 'upload');
+            Route::delete('tinymce-delete-image', 'destroy');
+        });
     });
 });
 
-Route::get('/bkash/payment', [BkashTokenizePaymentController::class, 'index'])->name('bkash');
-Route::post('/bkash/create-payment', [BkashTokenizePaymentController::class, 'createPayment'])->name('bkash-create-payment');
-Route::get('/bkash/callback', [BkashTokenizePaymentController::class, 'callBack'])->name('bkash-callBack');
-Route::get('/bkash/search/{trxID}', [BkashTokenizePaymentController::class, 'searchTnx'])->name('bkash-serach');
+// bKash (outside the maintenance-mode group, as in the old code)
+Route::controller(BkashTokenizePaymentController::class)->group(function () {
+    Route::get('bkash/payment', 'index')->name('bkash');
+    Route::post('bkash/create-payment', 'createPayment')->name('bkash-create-payment');
+    Route::get('bkash/callback', 'callBack')->name('bkash-callBack');
+    Route::get('bkash/search/{trxID}', 'searchTnx')->name('bkash-serach');
+});
 
-// Public landing page view by slug
-Route::resource('landing-pages', LandingPageController::class);
-Route::get('/lp/{slug}', [LandingPageController::class, 'show'])->name('landing.show');
+// Landing pages (public)
+Route::controller(LandingPageController::class)->group(function () {
+    Route::get('landing-pages', 'index')->name('landing-pages.index');
+    Route::get('landing-pages/create', 'create')->name('landing-pages.create');
+    Route::post('landing-pages', 'store')->name('landing-pages.store');
+    Route::get('landing-pages/{landing_page}', 'show')->name('landing-pages.show');
+    Route::get('landing-pages/{landing_page}/edit', 'edit')->name('landing-pages.edit');
+    Route::match(['put', 'patch'], 'landing-pages/{landing_page}', 'update')->name('landing-pages.update');
+    Route::delete('landing-pages/{landing_page}', 'destroy')->name('landing-pages.destroy');
+    Route::get('lp/{slug}', 'show')->name('landing.show');
+});
 
 Route::get('/start-right-now', function () {
     return view('landing_pages/abc_it_park');
@@ -310,7 +363,7 @@ Route::get('/landing/atsskill-3', function () {
     return view('landing_pages.atsskill3');
 })->name('landing.atsskill-3');
 
-// maintenance mode route
+// Maintenance mode page
 Route::get('/maintenance-mode', function () {
     if (! setting('maintenance_mode')) {
         return redirect()->route('home');
@@ -319,8 +372,7 @@ Route::get('/maintenance-mode', function () {
     return view('global.maintenance');
 })->name('maintenance.mode');
 
-require __DIR__.'/auth.php';
-
-Route::get('/page/{slug}', [HomePageController::class, 'customPage'])->name('custom-page');
-
-require __DIR__.'/admin.php';
+// Public custom page by slug
+Route::controller(HomePageController::class)->group(function () {
+    Route::get('page/{slug}', 'customPage')->name('custom-page');
+});
