@@ -1,0 +1,1 @@
+<p>{{ __('Hello') }},</p><p>{{ __('A live class has been scheduled for the course') }} <strong>{{ $course->title ?? '' }}</strong>.</p><p>{{ __('Date') }}: {{ $liveClass->start_date ?? '' }}</p><p>{{ __('Join here') }}: <a href="{{ $liveClass->join_url ?? '#' }}">{{ $liveClass->join_url ?? '' }}</a></p>

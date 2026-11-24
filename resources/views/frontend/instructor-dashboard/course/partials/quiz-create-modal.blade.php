@@ -1,0 +1,9 @@
+<div class="modal fade" id="quizCreateModal" tabindex="-1" aria-hidden="true"><div class="modal-dialog"><div class="modal-content">
+    <div class="modal-header"><h5 class="modal-title">{{ __('Add Quiz') }}</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+    <form action="{{ route('instructor.course-chapter.lesson.store') }}" method="POST" enctype="multipart/form-data">@csrf
+    <input type="hidden" name="course_id" value="{{ $course->id ?? '' }}"><input type="hidden" name="chapter_id" value="{{ $chapter->id ?? '' }}">
+    <div class="modal-body"><div class="mb-3"><label class="form-label">Quiz Title</label><input type="text" name="title" class="form-control"></div>
+<div class="mb-3"><label class="form-label">Description</label><textarea name="description" rows="3" class="form-control"></textarea></div>
+</div>
+    <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ __('Close') }}</button><button class="btn btn-primary">{{ __('Save') }}</button></div>
+    </form></div></div></div>

@@ -1,0 +1,1 @@
+<div class="border rounded p-3 mb-2"><strong>{{ $review->user->name ?? '' }}</strong> — {{ str_repeat('★', (int)($review->rating ?? 0)) }}<p class="mb-0">{{ $review->comment ?? $review->review ?? '' }}</p></div>

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600">
+  <rect width="800" height="600" fill="#e9eef5"/>
+  <rect x="300" y="220" width="200" height="120" rx="12" fill="#0b3d91" opacity="0.12"/>
+  <text x="400" y="290" font-family="sans-serif" font-size="36" font-weight="bold" fill="#0b3d91" text-anchor="middle">ATS Skill</text>
+  <text x="400" y="330" font-family="sans-serif" font-size="18" fill="#5a6b85" text-anchor="middle">Image coming soon</text>
+</svg>

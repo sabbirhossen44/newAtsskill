@@ -1,0 +1,1 @@
+<p>{{ __('Hello') }},</p><p>{{ __('Your question has a new reply') }}:</p><blockquote>{{ $reply->reply ?? '' }}</blockquote><p><a href="{{ route('student.learning.index', $course->slug ?? '') }}">{{ __('View Lesson') }}</a></p>

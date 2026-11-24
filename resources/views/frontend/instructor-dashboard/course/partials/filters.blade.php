@@ -1,0 +1,2 @@
+<div class="row g-2"><div class="col-md-4"><select name="level_id" class="form-select"><option value="">{{ __('All Levels') }}</option>@foreach ($levels ?? [] as $l)<option value="{{ $l->id }}">{{ $l->translation->name ?? '' }}</option>@endforeach</select></div>
+<div class="col-md-4"><select name="language_id" class="form-select"><option value="">{{ __('All Languages') }}</option>@foreach ($languages ?? [] as $l)<option value="{{ $l->id }}">{{ $l->name }}</option>@endforeach</select></div></div>

@@ -1,0 +1,7 @@
+@extends('frontend.layouts.master')
+@section('meta_title', ($landingPage->title ?? __('Landing Page')) . ' | ' . setting('app_name', 'ATS Skill'))
+@section('contents')
+    @include('frontend.home-one.sections.hero', ['hero' => $landingPage->hero ?? $hero ?? null])
+    @include('frontend.home-one.sections.courses', ['courses' => $courses ?? []])
+    @include('frontend.home-one.sections.testimonials', ['testimonials' => $testimonials ?? []])
+@endsection
