@@ -23,6 +23,11 @@ class PageRepository
         return static::model()::query()->where('slug', $slug)->first();
     }
 
+    public static function findBySlugOrFail(string $slug): CustomPage
+    {
+        return static::model()::query()->where('slug', $slug)->firstOrFail();
+    }
+
     public static function storeByRequest(array $data): CustomPage
     {
         $data['slug'] = CustomPage::generateUniqueSlug(

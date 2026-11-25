@@ -22,9 +22,9 @@ class CourseChapterLesson extends Model
     protected function casts(): array
     {
         return [
-            'storage' => App\Enums\LessonStorageEnum::class,
-            'file_type' => App\Enums\LessonFileTypeEnum::class,
-            'status' => App\Enums\ChapterStatusEnum::class,
+            'storage' => \App\Enums\LessonStorageEnum::class,
+            'file_type' => \App\Enums\LessonFileTypeEnum::class,
+            'status' => \App\Enums\ChapterStatusEnum::class,
             'downloadable' => 'boolean',
             'is_free' => 'boolean',
         ];

@@ -16,7 +16,7 @@ class CourseLiveClass extends Model
     protected function casts(): array
     {
         return [
-            'type' => App\Enums\LiveClassTypeEnum::class,
+            'type' => \App\Enums\LiveClassTypeEnum::class,
         ];
     }
 

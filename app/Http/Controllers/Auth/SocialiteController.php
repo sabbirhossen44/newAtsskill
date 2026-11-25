@@ -3,19 +3,22 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Enums\SocialiteDriverEnum;
+use App\Enums\UserBannedEnum;
 use App\Enums\UserStatusEnum;
 use App\Http\Controllers\Controller;
-use App\Models\User;
+use App\Repositories\SocialiteCredentialRepository;
+use App\Repositories\UserRepository;
 use App\Http\Controllers\Concerns\CreatesSocialUser;
 use App\Http\Controllers\Concerns\SetsSocialiteConfig;
 use Illuminate\Support\Facades\Auth;
 use Laravel\Socialite\Facades\Socialite;
 
-class SocialiteController extends Controller {
-    use SetsSocialiteConfig;
+class SocialiteController extends Controller
+{
     use CreatesSocialUser, SetsSocialiteConfig;
 
-    public function __construct() {
+    public function __construct()
+    {
         $driver = request('driver', null);
         if ($driver == SocialiteDriverEnum::FACEBOOK->value) {
             self::setFacebookLoginInfo();
@@ -24,7 +27,8 @@ class SocialiteController extends Controller {
         }
     }
 
-    public function redirectToDriver($driver) {
+    public function redirectToDriver($driver)
+    {
         if (in_array($driver, SocialiteDriverEnum::getAll())) {
             return Socialite::driver($driver)->redirect();
         }
@@ -34,8 +38,9 @@ class SocialiteController extends Controller {
         return redirect()->back()->with($notification);
     }
 
-    public function handleDriverCallback($driver) {
-        if (!in_array($driver, SocialiteDriverEnum::getAll())) {
+    public function handleDriverCallback($driver)
+    {
+        if (! in_array($driver, SocialiteDriverEnum::getAll())) {
             $notification = __('Invalid Social Login Type!');
             $notification = ['messege' => $notification, 'alert-type' => 'error'];
 
@@ -44,16 +49,13 @@ class SocialiteController extends Controller {
         try {
             $provider_name = SocialiteDriverEnum::from($driver)->value;
             $callbackUser = Socialite::driver($provider_name)->stateless()->user();
-            $user = User::where('email', $callbackUser->getEmail())->first();
+            $user = UserRepository::findByEmail($callbackUser->getEmail());
             if ($user) {
-                $findDriver = $user
-                    ->socialite()
-                    ->where(['provider_name' => $provider_name, 'provider_id' => $callbackUser->getId()])
-                    ->first();
+                $findDriver = SocialiteCredentialRepository::findForUser($user->id, $provider_name, $callbackUser->getId());
 
                 if ($findDriver) {
-                    if ($user->status == UserStatusEnum::ACTIVE->value) {
-                        if ($user->is_banned == 'no') {
+                    if ($user->status === UserStatusEnum::ACTIVE) {
+                        if ($user->is_banned === UserBannedEnum::NO) {
                             if (app()->isProduction() && $user->email_verified_at == null) {
                                 $notification = __('Please verify your email');
                                 $notification = ['messege' => $notification, 'alert-type' => 'error'];
@@ -111,7 +113,7 @@ class SocialiteController extends Controller {
                 if ($callbackUser) {
                     $socialite = $this->createNewUser(callbackUser: $callbackUser, provider_name: $provider_name, user: false);
                     if ($socialite) {
-                        $user = User::find($socialite->user_id);
+                        $user = UserRepository::findById($socialite->user_id);
                         Auth::guard('web')->login($user, true);
                         $notification = __('Logged in successfully.');
                         $notification = ['messege' => $notification, 'alert-type' => 'success'];
@@ -134,7 +136,6 @@ class SocialiteController extends Controller {
 
                 return redirect()->back()->with($notification);
             }
-
         } catch (\Exception $e) {
             return to_route('login');
         }

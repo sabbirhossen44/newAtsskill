@@ -2,198 +2,51 @@
 
 namespace App\Http\Controllers\Frontend;
 
-use Carbon\Carbon;
-use App\Models\Quiz;
-use Firebase\JWT\JWT;
-use App\Models\Course;
-use App\Models\QuizResult;
-use App\Models\Announcement;
-use App\Models\CourseReview;
-use App\Models\JitsiSetting;
-use App\Models\QuizQuestion;
-use Illuminate\Http\Request;
-use App\Models\CourseProgress;
-use App\Models\CourseChapterItem;
-use App\Models\CourseChapterLesson;
 use App\Http\Controllers\Controller;
-use Illuminate\Support\Facades\Cache;
+use App\Http\Requests\Frontend\LearningReviewRequest;
+use App\Repositories\CourseRepository;
+use App\Repositories\CourseReviewRepository;
+use App\Repositories\LearningRepository;
+use App\Repositories\QuizResultRepository;
+use App\Services\LearningService;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Session;
-use Illuminate\Support\Facades\Storage;
 
-class LearningController extends Controller {
-    function index(string $slug) {
-        $course = Course::active()->with([
-            'chapters',
-            'chapters.chapterItems',
-            'chapters.chapterItems.lesson',
-            'chapters.chapterItems.quiz',
-        ])->withTrashed()->where('slug', $slug)->first();
-        Session::put('course_slug', $slug);
-        Session::put('course_title', $course->title);
+class LearningController extends Controller
+{
+    function index(string $slug)
+    {
+        $course = CourseRepository::findActiveBySlugWithContent($slug);
 
-        $currentProgress = CourseProgress::where('user_id', auth('web')->user()->id)
-            ->where('course_id', $course->id)
-            ->where('current', 1)
-            ->orderBy('id', 'desc')
-            ->first();
-
-        $alreadyWatchedLectures = CourseProgress::where('user_id', auth('web')->user()->id)
-            ->where('course_id', $course->id)
-            ->where('type', 'lesson')
-            ->where('watched', 1)
-            ->pluck('lesson_id')
-            ->toArray();
-
-        $alreadyCompletedQuiz = CourseProgress::where('user_id', auth('web')->user()->id)
-            ->where('course_id', $course->id)
-            ->where('type', 'quiz')
-            ->where('watched', 1)
-            ->pluck('lesson_id')
-            ->toArray();
-
-        $announcements = Announcement::where('course_id', $course->id)->orderBy('id', 'desc')->get();
-
-        $courseLectureCount = CourseChapterItem::whereHas('chapter', function ($q) use ($course) {
-            $q->where('course_id', $course->id);
-        })->count();
-
-        $courseLectureCompletedByUser = CourseProgress::where('user_id', auth('web')->user()->id)
-            ->where('course_id', $course->id)->where('watched', 1)->count();
-        $courseCompletedPercent = $courseLectureCount > 0 ? ($courseLectureCompletedByUser / $courseLectureCount) * 100 : 0;
-
-        if (!$currentProgress) {
-            $lessonId = @$course->chapters?->first()?->chapterItems()?->first()?->lesson->id;
-            if ($lessonId) {
-                $currentProgress = CourseProgress::create([
-                    'user_id'    => auth('web')->user()->id,
-                    'course_id'  => $course->id,
-                    'chapter_id' => $course->chapters->first()->id,
-                    'lesson_id'  => $lessonId,
-                    'current'    => 1,
-                ]);
-            }
-        }
-        return view('frontend.pages.learning-player.index', compact(
-            'course',
-            'currentProgress',
-            'announcements',
-            'courseCompletedPercent',
-            'courseLectureCount',
-            'courseLectureCompletedByUser',
-            'alreadyWatchedLectures',
-            'alreadyCompletedQuiz'
-        ));
+        return view('frontend.pages.learning-player.index', LearningService::playerData($course, auth('web')->user()));
     }
 
-    function getFileInfo(Request $request) {
-        // set progress status
-        CourseProgress::where('course_id', $request->courseId)->update(['current' => 0]);
-        $progress = CourseProgress::updateOrCreate(
-            [
-                'user_id'    => auth('web')->user()->id,
-                'course_id'  => $request->courseId,
-                'chapter_id' => $request->chapterId,
-                'lesson_id'  => $request->lessonId,
-                'type'       => $request->type,
-            ],
-            [
-                'current' => 1,
-            ]
-        );
-
-        if ($request->type == 'lesson') {
-            $fileInfo = array_merge(CourseChapterLesson::select(['id', 'file_path', 'storage', 'file_type', 'downloadable', 'description'])->findOrFail($request->lessonId)->toArray(), ['type' => 'lesson']);
-            if (in_array($fileInfo['storage'], ['wasabi', 'aws'])) {
-                $fileInfo['file_path'] = Storage::disk($fileInfo['storage'])->url($fileInfo['file_path']);
-            }
-            return response()->json([
-                'file_info' => $fileInfo,
-            ]);
-        } elseif ($request->type == 'live') {
-            $fileInfo = array_merge(
-                CourseChapterLesson::with([
-                    'course:id,instructor_id,slug',
-                    'course.instructor:id',
-                    'course.instructor.zoom_credential:id,instructor_id,client_id,client_secret',
-                    'course.instructor.jitsi_credential:id,instructor_id,app_id,api_key,permissions',
-                    'live:id,lesson_id,start_time,type,meeting_id,password,join_url',
-                ])->select([
-                    'id', 'course_id', 'chapter_item_id', 'title', 'description',
-                    'duration', 'file_path', 'storage', 'file_type', 'downloadable',
-                ])->findOrFail($request->lessonId)->toArray(),
-                ['type' => 'live']
-            );
-
-            $now = Carbon::now();
-            $startTime = Carbon::parse($fileInfo['live']['start_time']);
-            $endTime = $startTime->clone()->addMinutes($fileInfo['duration']);
-            $fileInfo['start_time'] = formattedDateTime($startTime);
-            $fileInfo['end_time'] = formattedDateTime($endTime);
-            $fileInfo['is_live_now'] = $now->between($startTime, $endTime);
-
-            if ($now->lt($startTime)) {
-                $fileInfo['is_live_now'] = 'not_started';
-            } elseif ($now->between($startTime, $endTime)) {
-                $fileInfo['is_live_now'] = 'started';
-            } else {
-                $fileInfo['is_live_now'] = 'ended';
-            }
-
-            return response()->json([
-                'file_info' => $fileInfo,
-            ]);
-        } elseif ($request->type == 'document') {
-            $fileInfo = array_merge(CourseChapterLesson::select(['id', 'file_path', 'storage', 'file_type', 'downloadable', 'description'])->findOrFail($request->lessonId)->toArray(), ['type' => 'document']);
-            if ('pdf' == $fileInfo['file_type']) {
-                return response()->json([
-                    'view'      => view('frontend.pages.learning-player.partials.pdf-viewer', ['file_path' => $fileInfo['file_path']])->render(),
-                    'file_info' => $fileInfo,
-                ]);
-            } elseif ('docx' == $fileInfo['file_type']) {
-                return response()->json([
-                    'view'      => view('frontend.pages.learning-player.partials.docx-viewer', ['file_path' => $fileInfo['file_path']])->render(),
-                    'file_info' => $fileInfo,
-                ]);
-            } else {
-                return response()->json([
-                    'file_info' => $fileInfo,
-                ]);
-            }
-        } else {
-            $fileInfo = array_merge(Quiz::findOrFail($request->lessonId)->toArray(), ['type' => 'quiz']);
-
-            return response()->json([
-                'file_info' => $fileInfo,
-            ]);
-        }
+    function getFileInfo(Request $request)
+    {
+        return response()->json(LearningService::fileInfo($request->only(['courseId', 'chapterId', 'lessonId', 'type']), auth('web')->user()));
     }
 
-    function makeLessonComplete(Request $request) {
-        $progress = CourseProgress::where(['lesson_id' => $request->lessonId, 'user_id' => auth('web')->user()->id, 'type' => $request->type])->first();
-        if ($progress) {
-            $progress->watched = $request->status;
-            $progress->save();
-            return response()->json(['status' => 'success', 'message' => __('Updated successfully.')]);
-        } else {
-            if ($request->status == 0) {
-                return;
-            }
+    function makeLessonComplete(Request $request)
+    {
+        $result = LearningService::markLessonComplete($request->only(['lessonId', 'type', 'status']), auth('web')->user());
 
-            return response()->json(['status' => 'error', 'message' => __('You didnt watched this lesson')]);
-        }
+        return $result === null ? response('', 200) : response()->json($result);
     }
 
-    function downloadResource(string $lessonId) {
-        $resource = CourseChapterLesson::findOrFail($lessonId);
-        if (!\File::exists(public_path($resource->file_path))) {
+    function downloadResource(string $lessonId)
+    {
+        $resource = LearningService::downloadableLesson($lessonId);
+        if (! \File::exists(public_path($resource->file_path))) {
             return redirect()->back()->with(['alert-type' => 'error', 'message' => __('Links is broke or some thing went wrong')]);
         }
+
         return response()->download(public_path($resource->file_path));
     }
 
-    function quizIndex(string $id) {
-        $attempt = QuizResult::where('user_id', auth('web')->user()->id)->where('quiz_id', $id)->count();
-        $quiz = Quiz::withCount('questions')->findOrFail($id);
+    function quizIndex(string $id)
+    {
+        $attempt = QuizResultRepository::countAttempts(auth('web')->user()->id, (int) $id);
+        $quiz = LearningRepository::findQuizOrFail($id);
         if ($attempt >= $quiz->attempt) {
             return redirect()->route('student.learning.index', Session::get('course_slug'))->with(['alert-type' => 'error', 'message' => __('You reached maximum attempt')]);
         }
@@ -201,160 +54,63 @@ class LearningController extends Controller {
         return view('frontend.pages.learning-player.quiz-index', compact('quiz', 'attempt'));
     }
 
-    function quizStore(Request $request, string $id) {
-        $grad = 0;
-        $result = [];
-        $quiz = Quiz::findOrFail($id);
-        foreach ($request->question ?? [] as $key => $questionAns) {
-            $question = QuizQuestion::findOrFail($key);
-            $answer = $question->answers->where('correct', 1)->pluck('id')->toArray();
+    function quizStore(Request $request, string $id)
+    {
+        $quiz = LearningRepository::findQuizOrFail($id);
+        $quizResult = LearningService::gradeQuiz($quiz, $request->question ?? [], auth('web')->user());
 
-            if (in_array($questionAns, $answer)) {
-                $grad += $question->grade;
-            }
-            $result[$key] = [
-                "answer"  => $questionAns,
-                "correct" => in_array($questionAns, $answer),
-            ];
-        }
-
-        $quizResult = QuizResult::create([
-            'user_id'    => auth('web')->user()->id,
-            'quiz_id'    => $id,
-            'result'     => json_encode($result),
-            'user_grade' => $grad,
-            'status'     => $grad >= $quiz->pass_mark ? 'pass' : 'failed',
-        ]);
         return redirect()->route('student.quiz.result', ['id' => $id, 'result_id' => $quizResult->id]);
     }
 
-    function quizResult(string $id, string $resultId) {
-        $attempt = QuizResult::where('user_id', auth('web')->user()->id)->where('quiz_id', $id)->count();
-        $quiz = Quiz::withCount('questions')->findOrFail($id);
-        $quizResult = QuizResult::findOrFail($resultId);
+    function quizResult(string $id, string $resultId)
+    {
+        $attempt = QuizResultRepository::countAttempts(auth('web')->user()->id, (int) $id);
+        $quiz = LearningRepository::findQuizOrFail($id);
+        $quizResult = LearningRepository::findQuizResultOrFail($resultId);
 
         return view('frontend.pages.learning-player.quiz-result', compact('quiz', 'attempt', 'quizResult'));
     }
 
-    function addReview(Request $request) {
-        $request->validate([
-            'course_id'            => ['required', 'exists:courses,id'],
-            'rating'               => ['required', 'integer', 'min:1', 'max:5'],
-            'review'               => ['required', 'max: 1000', 'string'],
-            'g-recaptcha-response' => setting('recaptcha_status') === 'active' ? 'required' : 'nullable',
-        ], [
-            'rating.required'               => __('rating filed is required'),
-            'rating.integer'                => __('rating have to be an integer'),
-            'review.required'               => __('review filed is required'),
-            'g-recaptcha-response.required' => __('Please complete the recaptcha to submit the form'),
-        ]);
-
-        $review = CourseReview::where(['course_id' => $request->course_id, 'user_id' => auth('web')->user()->id])->first();
+    function addReview(LearningReviewRequest $request)
+    {
+        $review = CourseReviewRepository::findForUser($request->course_id, auth('web')->user()->id);
         if ($review) {
             return redirect()->back()->with(['alert-type' => 'error', 'message' => __('Already added review')]);
         }
 
-        CourseReview::create([
-            'course_id' => $request->course_id,
-            'user_id'   => auth('web')->user()->id,
-            'rating'    => $request->rating,
-            'review'    => $request->review,
-        ]);
+        LearningService::storeReview($request->validated(), auth('web')->user());
 
         return redirect()->back()->with(['alert-type' => 'success', 'message' => __('Review added successfully')]);
-
     }
 
-    function fetchReviews(Request $request, string $courseId) {
-        $reviews = CourseReview::where(['course_id' => $courseId, 'status' => 1])->whereHas('course')->whereHas('user')->orderBy('id', 'desc')->paginate(8, ['*'], 'page', $request->page ?? 1);
+    function fetchReviews(Request $request, string $courseId)
+    {
+        $reviews = CourseReviewRepository::paginateForCourse((int) $courseId, (int) ($request->page ?? 1));
+
         return response()->json([
-            'view'       => view('frontend.pages.learning-player.partials.review-card', compact('reviews'))->render(),
-            'page'       => $request->page,
-            'last_page'  => $reviews->lastPage(),
+            'view' => view('frontend.pages.learning-player.partials.review-card', compact('reviews'))->render(),
+            'page' => $request->page,
+            'last_page' => $reviews->lastPage(),
             'data_count' => $reviews->count(),
         ]);
     }
 
-    function liveSession(Request $request, string $slug, string $lesson_id) {
-        $lesson = CourseChapterLesson::select('id', 'course_id', 'chapter_item_id', 'title')->with(['course' => function ($q) {
-            $q->select('id', 'instructor_id', 'slug');
-        }, 'course.instructor' => function ($q) {
-            $q->select('id');
-        }, 'course.instructor.zoom_credential' => function ($q) {
-            $q->select('id', 'instructor_id', 'client_id', 'client_secret');
-        }, 'chapterItem' => function ($q) {
-            $q->select('id', 'type');
-        }, 'live' => function ($q) {
-            $q->select('id', 'lesson_id', 'start_time', 'type', 'meeting_id', 'password', 'join_url');
-        }])->findOrFail($lesson_id);
+    function liveSession(Request $request, string $slug, string $lesson_id)
+    {
+        $data = LearningService::liveSessionData($lesson_id, auth('web')->user());
 
-        if ($lesson->live->type == 'zoom') {
-            return view('frontend.pages.learning-player.partials.live.zoom', compact('lesson'));
-        } else {
-            $jitsi_credential = JitsiSetting::where('instructor_id',$lesson->course->instructor_id)->first();
-            if($jitsi_credential){
-                $jwt = $this->generateJwtToken($jitsi_credential);
-                $roomName = "{$jitsi_credential->app_id}/{$lesson->live->meeting_id}";
-                return view('frontend.pages.learning-player.partials.live.jitsi', [
-                    'title' => $lesson->title,
-                    'jwt' => trim($jwt),
-                    'roomName' => $roomName
-                ]);
-            }
+        if ($data === null) {
             return back();
         }
-    }
 
-    /**
-     * Generate a JaaS JWT token.
-     *
-     * @return string
-     */
-    protected function generateJwtToken($jitsi_credential) {
-        $user = auth('web')->user();
-        $instructor = $jitsi_credential->instructor_id == $user->id;
+        if ($data['type'] == 'zoom') {
+            return view('frontend.pages.learning-player.partials.live.zoom', ['lesson' => $data['lesson']]);
+        }
 
-        $api_key = $jitsi_credential->api_key;
-        $app_id =  $jitsi_credential->app_id; // Your AppID (previously tenant)
-        $user_email = $user->name;
-        $user_name = $user->name;
-        $user_is_moderator = $instructor;
-        $user_avatar_url = !empty($user->image) ? asset($user->image) : "";
-        $user_id = $user->id;
-        $live_streaming_enabled = $instructor;
-        $recording_enabled = $instructor;
-        $outbound_enabled = false;
-        $transcription_enabled = false;
-        $exp_delay = 7200;
-        $nbf_delay = 0;
-
-        // Read your private key from file
-        $private_key = file_get_contents(storage_path("app/user_{$jitsi_credential->instructor_id}/rsb_private_key.pk"));
-
-        $payload = [
-            'iss'     => 'chat',
-            'aud'     => 'jitsi',
-            'exp'     => time() + $exp_delay,
-            'nbf'     => time() - $nbf_delay,
-            'room'    => '*',
-            'sub'     => $app_id,
-            'context' => [
-                'user'     => [
-                    'moderator' => $user_is_moderator ? "true" : "false",
-                    'email'     => $user_email,
-                    'name'      => $user_name,
-                    'avatar'    => $user_avatar_url,
-                    'id'        => $user_id,
-                ],
-                'features' => [
-                    'recording'     => $recording_enabled ? "true" : "false",
-                    'livestreaming' => $live_streaming_enabled ? "true" : "false",
-                    'transcription' => $transcription_enabled ? "true" : "false",
-                    'outbound-call' => $outbound_enabled ? "true" : "false",
-                ],
-            ],
-        ];
-
-        return JWT::encode($payload, $private_key, "RS256", $api_key);
+        return view('frontend.pages.learning-player.partials.live.jitsi', [
+            'title' => $data['title'],
+            'jwt' => $data['jwt'],
+            'roomName' => $data['roomName'],
+        ]);
     }
 }

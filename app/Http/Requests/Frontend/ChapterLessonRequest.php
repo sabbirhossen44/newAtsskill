@@ -31,6 +31,13 @@ class ChapterLessonRequest extends FormRequest {
             'duration'    => ['required', 'numeric', 'min:0'],
             'live_status'   => ['sometimes'],
             'student_mail_sent'   => ['sometimes'],
+            // Passthrough fields the controller reads but does not validate.
+            'type' => ['sometimes'],
+            'chapter' => ['sometimes'],
+            'chapter_id' => ['sometimes'],
+            'course_id' => ['sometimes'],
+            'volume' => ['sometimes'],
+            'is_free' => ['sometimes'],
         ];
         if ($this->source == 'upload') {
             $rules['upload_path'] = ['required'];
@@ -46,6 +53,10 @@ class ChapterLessonRequest extends FormRequest {
             'title'       => ['required', 'max:255'],
             'description' => ['nullable'],
             'file_type'   => ['required', 'in:txt,pdf,docx'],
+            // Passthrough fields the controller reads but does not validate.
+            'type' => ['sometimes'],
+            'chapter_id' => ['sometimes'],
+            'course_id' => ['sometimes'],
             'upload_path' => [
                 'required',
                 function ($attribute, $value, $fail) {
@@ -71,6 +82,15 @@ class ChapterLessonRequest extends FormRequest {
             'live_type'   => ['required'],
             'start_time'  => 'required',
             'meeting_id'  => 'required',
+            // Passthrough fields the controller reads but does not validate.
+            'type' => ['sometimes'],
+            'chapter_id' => ['sometimes'],
+            'course_id' => ['sometimes'],
+            'student_mail_sent' => ['sometimes'],
+            'live_status' => ['sometimes'],
+            'source' => ['sometimes'],
+            'volume' => ['sometimes'],
+            'is_free' => ['sometimes'],
         ];
         if (! $this->live_status && !empty($this->source)) {
             $rules[$this->source === 'upload' ? 'upload_path' : 'link_path'] = ['required'];
@@ -90,6 +110,10 @@ class ChapterLessonRequest extends FormRequest {
             'attempts'   => ['nullable', 'numeric', 'min:1'],
             'pass_mark'  => ['required', 'numeric', 'min:1'],
             'total_mark' => ['required', 'numeric', 'min:1'],
+            // Passthrough fields the controller reads but does not validate.
+            'type' => ['sometimes'],
+            'chapter_id' => ['sometimes'],
+            'course_id' => ['sometimes'],
         ];
 
         return $rules;

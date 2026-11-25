@@ -16,7 +16,7 @@ class WithdrawRequest extends Model
     protected function casts(): array
     {
         return [
-            'status' => App\Enums\WithdrawStatusEnum::class,
+            'status' => \App\Enums\WithdrawStatusEnum::class,
             'current_amount' => 'decimal:2',
             'withdraw_amount' => 'decimal:2',
         ];

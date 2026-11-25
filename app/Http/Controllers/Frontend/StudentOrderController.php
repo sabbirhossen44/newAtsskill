@@ -3,23 +3,29 @@
 namespace App\Http\Controllers\Frontend;
 
 use App\Http\Controllers\Controller;
+use App\Repositories\OrderRepository;
 use Illuminate\Http\Request;
-use App\Models\Order;
 
 class StudentOrderController extends Controller
 {
-    function index() {
-        $orders = Order::where('buyer_id', auth('web')->user()->id)->orderBy('id', 'desc')->paginate(30);
+    function index()
+    {
+        $orders = OrderRepository::paginateForBuyer(auth('web')->user()->id, 30);
+
         return view('frontend.student-dashboard.orders.index', compact('orders'));
     }
 
-    function show(string $id) {
-        $order = Order::where('id', $id)->where('buyer_id', auth('web')->user()->id)->firstOrFail();
+    function show(string $id)
+    {
+        $order = OrderRepository::findForBuyerOrFail((int) $id, auth('web')->user()->id);
+
         return view('frontend.student-dashboard.orders.show', compact('order'));
     }
 
-    function printInvoice( Request $request, $id) {
-        $order = Order::where('id', $id)->where('buyer_id', auth('web')->user()->id)->firstOrFail();
-       return view('frontend.student-dashboard.orders.invoice', compact('order'));
+    function printInvoice(Request $request, $id)
+    {
+        $order = OrderRepository::findForBuyerOrFail((int) $id, auth('web')->user()->id);
+
+        return view('frontend.student-dashboard.orders.invoice', compact('order'));
     }
 }

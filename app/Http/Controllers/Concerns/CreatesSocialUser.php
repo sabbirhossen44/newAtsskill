@@ -2,7 +2,10 @@
 
 namespace App\Http\Controllers\Concerns;
 
-use App\Models\User;
+use App\Enums\UserBannedEnum;
+use App\Enums\UserStatusEnum;
+use App\Repositories\SocialiteCredentialRepository;
+use App\Repositories\UserRepository;
 use Exception;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
@@ -17,11 +20,11 @@ trait CreatesSocialUser
     {
         if (! $user) {
             $password = Str::random(10);
-            $user = User::create([
+            $user = UserRepository::createSocialUser([
                 'name' => $callbackUser->name,
                 'email' => $callbackUser->email,
-                'status' => 'active',
-                'is_banned' => 'no',
+                'status' => UserStatusEnum::ACTIVE->value,
+                'is_banned' => UserBannedEnum::NO->value,
                 'image' => $callbackUser->getAvatar(),
                 'email_verified_at' => now(),
                 'password' => Hash::make($password),
@@ -41,13 +44,11 @@ trait CreatesSocialUser
             }
         }
 
-        $socialite = $user->socialite()->create([
+        return SocialiteCredentialRepository::storeByRequest($user->id, [
             'provider_name' => $provider_name,
             'provider_id' => $callbackUser->getId(),
             'access_token' => $callbackUser->token ?? null,
             'refresh_token' => $callbackUser->refreshToken ?? null,
         ]);
-
-        return $socialite;
     }
 }

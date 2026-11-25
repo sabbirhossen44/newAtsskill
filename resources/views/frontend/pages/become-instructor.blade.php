@@ -16,9 +16,9 @@
                     <div class="card p-3 p-md-4">
                         <h2 class="h4 fw-bold mb-3">{{ __('Apply to Become an Instructor') }}</h2>
                         @if ($instructions ?? null)<div class="alert alert-info">{!! $instructions !!}</div>@endif
-                        @if (($instructorRequest->status ?? null) === 'pending')
+                        @if (($instructorRequest->status?->value ?? null) === 'pending')
                             <div class="alert alert-warning">{{ __('Your instructor request is pending review.') }}</div>
-                        @elseif (($instructorRequest->status ?? null) === 'approved')
+                        @elseif (($instructorRequest->status?->value ?? null) === 'approved')
                             <div class="alert alert-success">{{ __('Your instructor request has been approved.') }} <a href="{{ route('instructor.dashboard') }}">{{ __('Go to Instructor Dashboard') }}</a></div>
                         @else
                             <form action="{{ route('become-instructor.create') }}" method="POST" enctype="multipart/form-data">

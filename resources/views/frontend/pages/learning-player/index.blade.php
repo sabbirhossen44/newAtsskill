@@ -32,15 +32,15 @@
                 <div id="ch-{{ $chapter->id }}" class="accordion-collapse collapse {{ ($currentProgress->chapter_id ?? null) == $chapter->id ? 'show' : '' }}" data-bs-parent="#learningAccordion"><div class="accordion-body p-0"><ul class="list-group list-group-flush">
                 @foreach ($chapter->chapterItems ?? [] as $chapterItem)
                     @php $lesson = $chapterItem->lesson ?? null; @endphp
-                    @if ($chapterItem->type == 'lesson' || $chapterItem->type == 'live')
+                    @if ($chapterItem->type?->value == 'lesson' || $chapterItem->type?->value == 'live')
                     <li class="list-group-item d-flex justify-content-between align-items-center {{ $lesson && ($currentProgress->lesson_id ?? null) == $lesson->id ? 'active' : '' }}">
                         <a href="{{ route('student.learning.index', $course->slug ?? $course->id) }}?lesson={{ $lesson->id ?? '' }}" class="text-decoration-none {{ $lesson && ($currentProgress->lesson_id ?? null) == $lesson->id ? 'text-white' : '' }}">
-                        <i class="fas {{ $chapterItem->type == 'live' ? 'fa-video' : 'fa-play-circle' }} me-1"></i>{{ $lesson->title ?? '' }}</a>
+                        <i class="fas {{ $chapterItem->type?->value == 'live' ? 'fa-video' : 'fa-play-circle' }} me-1"></i>{{ $lesson->title ?? '' }}</a>
                         <span class="d-flex align-items-center gap-2"><small>{{ $lesson->duration ?? '' }}</small>
                         <input type="checkbox" class="form-check-input lesson-completed-checkbox" data-lesson-id="{{ $lesson->id ?? '' }}" {{ $lesson && in_array($lesson->id, $alreadyWatchedLectures ?? []) ? 'checked' : '' }}></span></li>
-                    @elseif ($chapterItem->type == 'quiz')
+                    @elseif ($chapterItem->type?->value == 'quiz')
                     <li class="list-group-item"><a href="{{ route('student.quiz.index', $chapterItem->quiz->id ?? $chapterItem->id) }}"><i class="fas fa-question-circle me-1"></i>{{ $chapterItem->quiz->title ?? __('Quiz') }}</a></li>
-                    @elseif ($chapterItem->type == 'document')
+                    @elseif ($chapterItem->type?->value == 'document')
                     <li class="list-group-item"><a href="{{ route('student.download-resource', $chapterItem->id) }}"><i class="fas fa-file me-1"></i>{{ $chapterItem->lesson->title ?? __('Document') }}</a></li>
                     @endif
                 @endforeach

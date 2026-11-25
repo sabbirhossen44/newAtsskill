@@ -16,10 +16,12 @@ class RoleFormRequest extends FormRequest
         if ($this->method() == 'POST') {
             return [
                 'name' => 'required|unique:roles,name',
+                'permissions' => 'nullable|array',
             ];
         } else {
             return [
                 'name' => "required|unique:roles,name,{$this->role->id}",
+                'permissions' => 'nullable|array',
             ];
         }
     }

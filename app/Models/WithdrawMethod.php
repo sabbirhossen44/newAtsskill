@@ -17,7 +17,7 @@ class WithdrawMethod extends Model
     protected function casts(): array
     {
         return [
-            'status' => App\Enums\ChapterStatusEnum::class,
+            'status' => \App\Enums\ChapterStatusEnum::class,
             'min_amount' => 'decimal:2',
             'max_amount' => 'decimal:2',
         ];

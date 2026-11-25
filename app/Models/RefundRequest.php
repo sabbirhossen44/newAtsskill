@@ -16,7 +16,7 @@ class RefundRequest extends Model
     protected function casts(): array
     {
         return [
-            'status' => App\Enums\RefundStatusEnum::class,
+            'status' => \App\Enums\RefundStatusEnum::class,
             'refund_amount' => 'decimal:2',
         ];
     }

@@ -32,10 +32,10 @@ class Course extends Model
             'downloadable' => 'boolean',
             'partner_instructor' => 'boolean',
             'qna' => 'boolean',
-            'type' => App\Enums\CourseTypeEnum::class,
-            'status' => App\Enums\CourseStatusEnum::class,
-            'is_approved' => App\Enums\CourseApprovalEnum::class,
-            'demo_video_storage' => App\Enums\LessonStorageEnum::class,
+            'type' => \App\Enums\CourseTypeEnum::class,
+            'status' => \App\Enums\CourseStatusEnum::class,
+            'is_approved' => \App\Enums\CourseApprovalEnum::class,
+            'demo_video_storage' => \App\Enums\LessonStorageEnum::class,
         ];
     }
 

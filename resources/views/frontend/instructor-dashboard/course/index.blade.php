@@ -7,7 +7,7 @@
     <tbody>@forelse ($courses ?? [] as $course)<tr>
         <td><div class="d-flex gap-2 align-items-center"><img src="{{ \App\Models\Media::resolveUrl($course->thumbnail ?? null) ?? asset('images/placeholder.svg') }}" width="48" height="36" class="rounded object-fit-cover" alt=""><span>{{ $course->title ?? '' }}</span></div></td>
         <td>৳{{ number_format($course->price ?? 0, 0) }}</td><td>{{ $course->enrollments_count ?? 0 }}</td>
-        <td><span class="badge bg-secondary">{{ $course->status ?? '' }}</span></td><td><span class="badge {{ ($course->is_approved ?? '') == 'approved' ? 'bg-success' : 'bg-warning text-dark' }}">{{ $course->is_approved ?? '' }}</span></td>
+        <td><span class="badge bg-secondary">{{ $course->status?->value ?? '' }}</span></td><td><span class="badge {{ ($course->is_approved?->value ?? '') == 'approved' ? 'bg-success' : 'bg-warning text-dark' }}">{{ $course->is_approved?->value ?? '' }}</span></td>
         <td class="text-nowrap"><a href="{{ route('instructor.courses.edit', $course->id) }}" class="btn btn-sm btn-outline-primary">{{ __('Edit') }}</a>
         <a href="{{ route('instructor.courses.edit-view', $course->id) }}" class="btn btn-sm btn-outline-secondary">{{ __('Content') }}</a>
         <a href="{{ route('instructor.course.delete-request.show', $course->id) }}" class="btn btn-sm btn-outline-danger">{{ __('Delete Request') }}</a></td></tr>

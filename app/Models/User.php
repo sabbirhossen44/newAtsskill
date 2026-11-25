@@ -29,9 +29,9 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
-            'role' => App\Enums\UserRoleEnum::class,
-            'status' => App\Enums\UserStatusEnum::class,
-            'is_banned' => App\Enums\UserBannedEnum::class,
+            'role' => \App\Enums\UserRoleEnum::class,
+            'status' => \App\Enums\UserStatusEnum::class,
+            'is_banned' => \App\Enums\UserBannedEnum::class,
             'wallet_balance' => 'decimal:2',
         ];
     }

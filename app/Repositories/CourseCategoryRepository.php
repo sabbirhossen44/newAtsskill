@@ -2,8 +2,11 @@
 
 namespace App\Repositories;
 
+use App\Enums\CourseStatusEnum;
 use App\Models\CourseCategory;
 use App\Services\TranslationService;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 
 class CourseCategoryRepository
@@ -57,5 +60,45 @@ class CourseCategoryRepository
         }
 
         return $updated;
+    }
+
+    /**
+     * Trending homepage categories (cached 1h, as the old
+     * HomePageController did).
+     */
+    public static function trending(): Collection
+    {
+        return Cache::remember('home_trending_categories', 3600, function () {
+            return static::model()::query()->with(['translation:id,name,course_category_id', 'subCategories' => function ($query) {
+                $query->withCount(['courses' => function ($query) {
+                    $query->where('status', CourseStatusEnum::ACTIVE->value);
+                }]);
+            }])->withCount(['subCategories as active_sub_categories_count' => function ($query) {
+                $query->whereHas('courses', function ($query) {
+                    $query->where('status', CourseStatusEnum::ACTIVE->value);
+                });
+            }])->whereNull('parent_id')
+                ->where('status', 1)
+                ->where('show_at_trending', 1)
+                ->get();
+        });
+    }
+
+    /**
+     * Root categories for the public course-listing filters
+     * (cached 24h, as the old CoursePageController did).
+     */
+    public static function activeRootCategories(): Collection
+    {
+        return Cache::remember('course_page_categories', 1440, function () {
+            return static::model()::active()->whereNull('parent_id')->with(['translation'])->get();
+        });
+    }
+
+    public static function subCategoriesForMainCategory(string $slug): Collection
+    {
+        return static::model()::query()->whereHas('parentCategory', function ($q) use ($slug) {
+            $q->where('slug', $slug);
+        })->with('translation')->get();
     }
 }

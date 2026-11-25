@@ -6,7 +6,7 @@
     <tbody>@forelse ($orders ?? [] as $order)<tr>
         <td>{{ $order->order_id ?? $order->id }}</td><td>{{ $order->created_at?->format('d M Y') ?? $order->created_at }}</td>
         <td>৳{{ number_format($order->total_amount ?? $order->total ?? 0, 0) }}</td><td>{{ $order->payment_status ?? '' }}</td>
-        <td><span class="badge bg-secondary">{{ $order->status ?? '' }}</span></td>
+        <td><span class="badge bg-secondary">{{ $order->status?->value ?? '' }}</span></td>
         <td class="text-nowrap"><a href="{{ route('student.order.show', $order->id) }}" class="btn btn-sm btn-outline-primary">{{ __('Details') }}</a>
         <a href="{{ route('student.order.print-invoice', $order->id) }}" class="btn btn-sm btn-outline-secondary" target="_blank">{{ __('Invoice') }}</a></td></tr>
     @empty<tr><td colspan="6" class="text-center text-muted py-4">{{ __('No orders yet.') }} <a href="{{ route('courses') }}">{{ __('Browse Courses') }}</a></td></tr>@endforelse</tbody></table></div></div>

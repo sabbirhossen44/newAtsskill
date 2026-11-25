@@ -18,7 +18,7 @@ class Quiz extends Model
     protected function casts(): array
     {
         return [
-            'status' => App\Enums\ChapterStatusEnum::class,
+            'status' => \App\Enums\ChapterStatusEnum::class,
         ];
     }
 

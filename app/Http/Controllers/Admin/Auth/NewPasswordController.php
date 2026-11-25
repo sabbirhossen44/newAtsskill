@@ -3,12 +3,9 @@
 namespace App\Http\Controllers\Admin\Auth;
 
 use App\Http\Controllers\Controller;
-use App\Models\Admin;
+use App\Http\Requests\Admin\AdminResetPasswordRequest;
+use App\Repositories\AdminRepository;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Password;
-use Illuminate\View\View;
 
 class NewPasswordController extends Controller
 {
@@ -17,8 +14,7 @@ class NewPasswordController extends Controller
      */
     public function custom_reset_password_page(Request $request, $token)
     {
-
-        $admin = Admin::select('id', 'name', 'email', 'forget_password_token')->where('forget_password_token', $token)->first();
+        $admin = AdminRepository::findByForgetPasswordToken($token);
 
         if (! $admin) {
             $notification = __('Invalid token, please try again');
@@ -33,23 +29,9 @@ class NewPasswordController extends Controller
     /**
      * Handle an incoming new password request.
      */
-    public function custom_reset_password_store(Request $request, $token)
+    public function custom_reset_password_store(AdminResetPasswordRequest $request, $token)
     {
-
-        $setting = (object) \App\Services\SettingService::all();
-
-        $rules = [
-            'email' => 'required',
-            'password' => 'required|min:4|confirmed',
-        ];
-        $customMessages = [
-            'email.required' => __('Email is required'),
-            'password.required' => __('Password is required'),
-            'password.min' => __('Password must be 4 characters'),
-        ];
-        $this->validate($request, $rules, $customMessages);
-
-        $admin = Admin::select('id', 'name', 'email', 'forget_password_token')->where('forget_password_token', $token)->where('email', $request->email)->first();
+        $admin = AdminRepository::findByForgetPasswordToken($token, $request->input('email'));
 
         if (! $admin) {
             $notification = __('Invalid token, please try again');
@@ -58,14 +40,11 @@ class NewPasswordController extends Controller
             return redirect()->back()->with($notification);
         }
 
-        $admin->password = Hash::make($request->password);
-        $admin->forget_password_token = null;
-        $admin->save();
+        AdminRepository::resetPassword($admin, $request->input('password'));
 
         $notification = __('Password Reset successfully');
         $notification = ['messege' => $notification, 'alert-type' => 'success'];
 
         return redirect()->route('admin.login')->with($notification);
-
     }
 }

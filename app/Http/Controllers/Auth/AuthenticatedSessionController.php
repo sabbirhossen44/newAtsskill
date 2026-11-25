@@ -2,17 +2,18 @@
 
 namespace App\Http\Controllers\Auth;
 
+use App\Enums\UserBannedEnum;
+use App\Enums\UserRoleEnum;
 use App\Enums\UserStatusEnum;
 use App\Http\Controllers\Controller;
-use App\Models\User;
+use App\Http\Requests\Auth\StudentLoginRequest;
+use App\Repositories\UserRepository;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
-use App\Models\Enrollment;
 
 class AuthenticatedSessionController extends Controller
 {
@@ -27,44 +28,29 @@ class AuthenticatedSessionController extends Controller
     /**
      * Handle an incoming authentication request.
      */
-    public function store(Request $request): RedirectResponse
+    public function store(StudentLoginRequest $request): RedirectResponse
     {
-        $setting = (object) \App\Services\SettingService::all();
-
-        $rules = [
-            'email' => 'required|email',
-            'password' => 'required',
-            // 'g-recaptcha-response' => $setting->recaptcha_status == 'active' ? 'required' : 'nullable',
-        ];
-
-        $customMessages = [
-            'email.required' => __('Email is required'),
-            'password.required' => __('Password is required'),
-            // 'g-recaptcha-response.required' => __('Please complete the recaptcha to submit the form'),
-        ];
-        $this->validate($request, $rules, $customMessages);
-
         $credential = [
             'email' => $request->email,
             'password' => $request->password,
         ];
 
-        $user = User::where('email', $request->email)->first();
+        $user = UserRepository::findByEmail($request->email);
 
         // Check if user exists and password match
-        if (!$user || !Hash::check($request->password, $user->password)) {
+        if (! $user || ! Hash::check($request->password, $user->password)) {
             $notification = __('Invalid credentials please check your email and password');
             throw ValidationException::withMessages(['email' => $notification]);
         }
 
         // Check if user active
-        if ($user->status != UserStatusEnum::ACTIVE->value) {
+        if ($user->status !== UserStatusEnum::ACTIVE) {
             $notification = __('Inactive account');
             throw ValidationException::withMessages(['email' => $notification]);
         }
 
         // Check if user is banned
-        if ($user->is_banned == 'yes') {
+        if ($user->is_banned === UserBannedEnum::YES) {
             $notification = __('Your account has been banned');
             $notification = ['messege' => $notification, 'alert-type' => 'error'];
 
@@ -72,7 +58,7 @@ class AuthenticatedSessionController extends Controller
         }
 
         // Check if email is verified
-        if (!$user->email_verified_at) {
+        if (! $user->email_verified_at) {
             $notification = __('Please verify your email');
             $notification = ['messege' => $notification, 'alert-type' => 'error'];
 
@@ -88,12 +74,15 @@ class AuthenticatedSessionController extends Controller
 
         $intendedUrl = session()->get('url.intended');
         if ($intendedUrl && \Str::contains($intendedUrl, '/admin')) {
-            if($user->role == 'instructor')  return redirect()->route('instructor.dashboard') ;
+            if ($user->role === UserRoleEnum::INSTRUCTOR) {
+                return redirect()->route('instructor.dashboard');
+            }
+
             return redirect()->route('student.dashboard');
         }
 
         return redirect()->intended(
-            $user->role === 'instructor' ?
+            $user->role === UserRoleEnum::INSTRUCTOR ?
                 route('instructor.dashboard') : route('student.dashboard')
         )->with($notification);
     }

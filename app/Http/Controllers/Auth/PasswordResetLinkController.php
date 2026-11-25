@@ -3,16 +3,15 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
-use App\Models\User;
-use App\Http\Controllers\Concerns\SendsAppMail;
 use App\Http\Controllers\Concerns\PaymentGatewayInfo;
-use Illuminate\Support\Facades\Cache;
+use App\Http\Controllers\Concerns\SendsAppMail;
+use App\Http\Requests\Auth\CustomForgotPasswordRequest;
+use App\Http\Requests\Auth\ForgotPasswordRequest;
+use App\Repositories\UserRepository;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
-use Illuminate\Support\Str;
 
 class PasswordResetLinkController extends Controller
 {
@@ -29,12 +28,8 @@ class PasswordResetLinkController extends Controller
      *
      * @throws \Illuminate\Validation\ValidationException
      */
-    public function store(Request $request): RedirectResponse
+    public function store(ForgotPasswordRequest $request): RedirectResponse
     {
-        $request->validate([
-            'email' => ['required', 'email'],
-        ]);
-
         // We will send the password reset link to this user. Once we have attempted
         // to send the link, we will examine the response then see the message we
         // need to show to the user. Finally, we'll send out a proper response.
@@ -43,29 +38,17 @@ class PasswordResetLinkController extends Controller
         );
 
         return $status == Password::RESET_LINK_SENT
-        ? back()->with('status', __($status))
-        : back()->withInput($request->only('email'))
-            ->withErrors(['email' => __($status)]);
+            ? back()->with('status', __($status))
+            : back()->withInput($request->only('email'))
+                ->withErrors(['email' => __($status)]);
     }
 
-    public function custom_forget_password(Request $request)
+    public function custom_forget_password(CustomForgotPasswordRequest $request)
     {
-
-        $setting = (object) \App\Services\SettingService::all();
-
-        $request->validate([
-            'email' => ['required', 'email'],
-            'g-recaptcha-response' => $setting->recaptcha_status == 'active' ? 'required' : '',
-        ], [
-            'email.required' => __('Email is required'),
-            'g-recaptcha-response.required' => __('Please complete the recaptcha to submit the form'),
-        ]);
-
-        $user = User::where('email', $request->email)->first();
+        $user = UserRepository::findByEmail($request->email);
 
         if ($user) {
-            $user->forget_password_token = Str::random(100);
-            $user->save();
+            UserRepository::setForgetPasswordToken($user);
 
             $this->sendUserForgetPasswordFromTrait($user);
 
@@ -73,10 +56,9 @@ class PasswordResetLinkController extends Controller
             $notification = ['messege' => $notification, 'alert-type' => 'success'];
 
             return redirect()->back()->with($notification);
-
-        } else {
-            $notification = __('Email does not exist');
-            throw ValidationException::withMessages(['email' => $notification]);
         }
+
+        $notification = __('Email does not exist');
+        throw ValidationException::withMessages(['email' => $notification]);
     }
 }

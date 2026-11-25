@@ -2,78 +2,45 @@
 
 namespace App\Http\Controllers\Frontend;
 
-use App\Enums\RedirectTypeEnum;
 use App\Http\Controllers\Controller;
-use App\Models\Course;
-use Illuminate\Http\Request;
-use App\Models\InstructorRequest;
-use App\Models\OrderItem;
-use App\Models\WithdrawMethod;
-use App\Models\WithdrawRequest;
+use App\Http\Requests\Frontend\PayoutStoreRequest;
+use App\Repositories\WithdrawRepository;
 
 class InstructorPayoutController extends Controller
 {
-    function index() {
+    function index()
+    {
+        $data = WithdrawRepository::payoutIndexData(auth('web')->user()->id);
 
-        $courseIds = Course::where('instructor_id', auth('web')->user()->id)->pluck('id')->toArray(); 
-        $totalCourseSold = OrderItem::whereIn('course_id', $courseIds)->count();
-        $withdrawRequests = WithdrawRequest::where('user_id', auth('web')->user()->id)->orderBy('id', 'desc')->paginate(30);
-        $totalWithdraw = WithdrawRequest::where(['user_id' => auth('web')->user()->id, 'status' => 'approved'])->sum('withdraw_amount');
-        return view('frontend.instructor-dashboard.payout.index', compact('totalCourseSold', 'withdrawRequests', 'totalWithdraw')); 
+        return view('frontend.instructor-dashboard.payout.index', $data);
     }
 
-    function create() {
-        $courseIds = Course::where('instructor_id', auth('web')->user()->id)->pluck('id')->toArray(); 
-        $totalCourseSold = OrderItem::whereIn('course_id', $courseIds)->count();
-        $gateway = InstructorRequest::where('user_id', auth('web')->user()->id)->first();
-        $withdrawMethod = WithdrawMethod::where('name', $gateway->payout_account)->first();
-        $totalWithdraw = WithdrawRequest::where(['user_id' => auth('web')->user()->id, 'status' => 'approved'])->sum('withdraw_amount');
-       return view('frontend.instructor-dashboard.payout.create', compact('totalCourseSold', 'gateway', 'totalWithdraw', 'withdrawMethod')); 
+    function create()
+    {
+        $data = WithdrawRepository::payoutCreateData(auth('web')->user()->id);
+
+        return view('frontend.instructor-dashboard.payout.create', $data);
     }
 
-    function store(Request $request) {
-        $request->validate([
-            'amount' => 'required|numeric',
-        ], [
-            'amount.required' => 'The amount field is required.',
-            'amount.numeric' => 'The amount must be a number.',
-        ]); 
+    function store(PayoutStoreRequest $request)
+    {
+        $user = auth('web')->user();
 
-        $gateway = InstructorRequest::where('user_id', auth('web')->user()->id)->first();
-        $withdrawMethod = WithdrawMethod::where('name', $gateway->payout_account)->first();
-
-        if($request->amount < 0 || $request->amount > auth('web')->user()->wallet_balance) {
-            return redirect()->back()->with(['alert-type' => 'error', 'messege' => __('Invalid amount')]);
-        }elseif($withdrawMethod->min_amount > $request->amount) {
-            return redirect()->back()->with(['alert-type' => 'error', 'messege' => __('Minimum payout amount is :amount', ['amount' => $withdrawMethod->min_amount])]);
-        }elseif($withdrawMethod->max_amount < $request->amount) {
-            return redirect()->back()->with(['alert-type' => 'error', 'messege' => __('Maximum payout amount is :amount', ['amount' => $withdrawMethod->max_amount])]);
-        }elseif(WithdrawRequest::where('user_id', auth('web')->user()->id)->where('status', 'pending')->exists()) {
-            return redirect()->back()->with(['alert-type' => 'error', 'messege' => __('You already have a pending payout request.')]);
+        if ($error = WithdrawRepository::validatePayout($user->id, $user->wallet_balance, $request->amount)) {
+            return redirect()->back()->with(['alert-type' => 'error', 'messege' => $error]);
         }
 
-        WithdrawRequest::create([
-            'user_id' => auth('web')->user()->id,
-            'withdraw_amount' => $request->amount,
-            'method' => $gateway->payout_account,
-            'account_info' => $gateway->payout_information,
-            'status' => 'pending',
-            'current_amount' => auth('web')->user()->wallet_balance,
-        ]);
-
+        WithdrawRepository::storePayoutRequest($user->id, $user->wallet_balance, $request->amount);
 
         return redirect()->route('instructor.payout.index')->with(['alert-type' => 'success', 'messege' => __('Payout request sent successfully.')]);
-
     }
 
-    function destroy(string $id) {
-        $request = WithdrawRequest::where('id', $id)->where(['user_id' => auth('web')->user()->id, 'status' => 'pending'])->first();
-
-        if($request) {
-            $request->delete();
+    function destroy(string $id)
+    {
+        if (WithdrawRepository::deletePending($id, auth('web')->user()->id)) {
             return response(['status' => 'success', 'message' => __('Deleted Successfully')]);
         }
+
         return response(['status' => 'success', 'message' => __('Request not found')]);
     }
 }
-

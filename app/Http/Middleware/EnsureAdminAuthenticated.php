@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
+use App\Enums\UserStatusEnum;
 use Illuminate\Support\Facades\Auth;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -24,7 +25,7 @@ class EnsureAdminAuthenticated
 
         $admin = Auth::guard('admin')->user();
 
-        if ($admin && (string) $admin->status !== 'active') {
+        if ($admin && $admin->status !== UserStatusEnum::ACTIVE) {
             Auth::guard('admin')->logout();
 
             return redirect()->route('admin.login')->with([

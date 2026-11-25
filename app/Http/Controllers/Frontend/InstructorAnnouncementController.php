@@ -4,10 +4,9 @@ namespace App\Http\Controllers\Frontend;
 
 use App\Enums\RedirectTypeEnum;
 use App\Http\Controllers\Controller;
-use App\Models\Announcement;
-use App\Models\Course;
 use App\Http\Controllers\Concerns\RedirectsWithMessage;
-use Illuminate\Http\Request;
+use App\Http\Requests\Frontend\AnnouncementRequest;
+use App\Repositories\AnnouncementRepository;
 
 class InstructorAnnouncementController extends Controller
 {
@@ -18,7 +17,8 @@ class InstructorAnnouncementController extends Controller
 
     function index()
     {
-        $announcements = Announcement::with(['course:id,title'])->where('instructor_id', auth('web')->user()->id)->orderBy('id', 'desc')->get();
+        $announcements = AnnouncementRepository::allForInstructor(auth('web')->user()->id);
+
         return view('frontend.instructor-dashboard.announcement.index', compact('announcements'));
     }
 
@@ -27,27 +27,17 @@ class InstructorAnnouncementController extends Controller
      */
     public function create()
     {
-        $courses = Course::select(['id', 'title'])->where('instructor_id', auth('web')->user()->id)->get();
+        $courses = AnnouncementRepository::coursesForInstructor(auth('web')->user()->id);
+
         return view('frontend.instructor-dashboard.announcement.create', compact('courses'));
     }
 
     /**
      * Store a newly created resource in storage.
      */
-    function store(Request $request)
+    function store(AnnouncementRequest $request)
     {
-        $request->validate([
-            'course' => 'required',
-            'title' => ['required', 'max:255'],
-            'announcement' => ['required', 'string']
-        ], [
-            'course.required' => 'Course is required',
-            'announcement.required' => 'Announcement is required',
-            'title.required' => 'Title is required',
-            'title.max' => 'Title should not be more than 255 characters',
-        ]);
-
-        Announcement::create([
+        AnnouncementRepository::storeByRequest([
             'instructor_id' => auth('web')->user()->id,
             'course_id' => $request->course,
             'title' => $request->title,
@@ -62,28 +52,19 @@ class InstructorAnnouncementController extends Controller
      */
     public function edit(string $id)
     {
-        $announcement = Announcement::findOrFail($id);
-        $courses = Course::select(['id', 'title'])->where('instructor_id', auth('web')->user()->id)->get();
+        $announcement = AnnouncementRepository::findByIdOrFail($id);
+        $courses = AnnouncementRepository::coursesForInstructor(auth('web')->user()->id);
+
         return view('frontend.instructor-dashboard.announcement.edit', compact('courses', 'announcement'));
     }
 
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, string $id)
+    public function update(AnnouncementRequest $request, string $id)
     {
-        $request->validate([
-            'course' => 'required',
-            'title' => ['required', 'max:255'],
-            'announcement' => ['required', 'string']
-        ], [
-            'course.required' => 'Course is required',
-            'announcement.required' => 'Announcement is required',
-            'title.required' => 'Title is required',
-            'title.max' => 'Title should not be more than 255 characters',
-        ]);
-        $announcement = Announcement::findOrFail($id);
-        $announcement->update([
+        $announcement = AnnouncementRepository::findByIdOrFail($id);
+        AnnouncementRepository::updateByRequest($announcement, [
             'course_id' => $request->course,
             'title' => $request->title,
             'announcement' => $request->announcement,
@@ -97,8 +78,9 @@ class InstructorAnnouncementController extends Controller
      */
     public function destroy(string $id)
     {
-       $announcement = Announcement::where('instructor_id', auth('web')->user()->id)->where('id', $id)->firstOrFail($id);
-       $announcement->delete();
-       return response()->json(['status' => 'success','message' => 'Announcement deleted successfully']);
+        $announcement = AnnouncementRepository::findForInstructorOrFail($id, auth('web')->user()->id);
+        AnnouncementRepository::delete($announcement);
+
+        return response()->json(['status' => 'success', 'message' => 'Announcement deleted successfully']);
     }
 }

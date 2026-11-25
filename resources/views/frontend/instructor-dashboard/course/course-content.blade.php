@@ -12,7 +12,7 @@
             <a href="{{ route('instructor.course-chapter.sorting.index', $course->id ?? 0) }}" class="btn btn-sm btn-outline-secondary">{{ __('Sort') }}</a>
             <form action="{{ route('instructor.course-chapter.destroy', $chapter->id) }}" method="POST" class="d-inline" onsubmit="return confirm('{{ __('Delete this section?') }}')">@csrf @method('DELETE')<button class="btn btn-sm btn-outline-danger">{{ __('Delete Section') }}</button></form>
         </div>
-        <ul class="list-group">@foreach ($chapter->chapterItems ?? [] as $item)<li class="list-group-item d-flex justify-content-between"><span><i class="fas fa-{{ $item->type == 'quiz' ? 'question-circle' : ($item->type == 'document' ? 'file' : ($item->type == 'live' ? 'video' : 'play-circle')) }} me-1"></i>{{ $item->lesson->title ?? $item->quiz->title ?? $item->type }}</span>
+        <ul class="list-group">@foreach ($chapter->chapterItems ?? [] as $item)<li class="list-group-item d-flex justify-content-between"><span><i class="fas fa-{{ $item->type?->value == 'quiz' ? 'question-circle' : ($item->type?->value == 'document' ? 'file' : ($item->type?->value == 'live' ? 'video' : 'play-circle')) }} me-1"></i>{{ $item->lesson->title ?? $item->quiz->title ?? $item->type?->value }}</span>
         <span><form action="{{ route('instructor.course-chapter.lesson.destroy', $item->id) }}" method="POST" class="d-inline" onsubmit="return confirm('{{ __('Delete?') }}')">@csrf @method('DELETE')<button class="btn btn-sm btn-outline-danger"><i class="fas fa-trash"></i></button></form></span></li>@endforeach</ul>
     </div></div></div>
 @empty<p class="text-muted">{{ __('No sections yet. Add a section to start building content.') }}</p>@endforelse

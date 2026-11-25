@@ -126,11 +126,15 @@ return [
     |--------------------------------------------------------------------------
     |
     | This value determines the classes that can be unserialized from cache
-    | storage. By default, no PHP classes will be unserialized from your
-    | cache to prevent gadget chain attacks if your APP_KEY is leaked.
+    | storage. The old codebase (and allSolution) caches Eloquent models,
+    | collections and paginators, so classes must be allowed here — with
+    | the stock `false` every cached model came back as an
+    | __PHP_Incomplete_Class and pages 500'd on the second (warm-cache)
+    | hit, e.g. "Attempt to read property 'slug' on string" in the
+    | courses/blog views.
     |
     */
 
-    'serializable_classes' => false,
+    'serializable_classes' => true,
 
 ];

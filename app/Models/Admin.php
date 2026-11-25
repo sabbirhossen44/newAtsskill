@@ -24,7 +24,7 @@ class Admin extends Authenticatable
     {
         return [
             'password' => 'hashed',
-            'status' => App\Enums\UserStatusEnum::class,
+            'status' => \App\Enums\UserStatusEnum::class,
         ];
     }
 

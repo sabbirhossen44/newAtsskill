@@ -2,21 +2,18 @@
 
 namespace App\Http\Controllers\Admin\Auth;
 
-use App\Models\Admin;
-use Illuminate\View\View;
-use Illuminate\Http\Request;
+use App\Enums\UserStatusEnum;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\AdminLoginRequest;
+use App\Repositories\AdminRepository;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Http\RedirectResponse;
-use Illuminate\Support\Facades\Cache;
+use Illuminate\View\View;
 
 class AuthenticatedSessionController extends Controller
 {
-    public function __construct()
-    {
-    }
-
     /**
      * Display the login view.
      */
@@ -27,29 +24,23 @@ class AuthenticatedSessionController extends Controller
 
     /**
      * Handle an incoming authentication request.
+     *
+     * Auth logic is unchanged from the old code: admin guard, active
+     * status check, Hash check, then guard attempt, redirect to the
+     * admin dashboard. Only the validation moved to a FormRequest
+     * and the admin lookup moved to AdminRepository.
      */
-    public function store(Request $request)
+    public function store(AdminLoginRequest $request)
     {
-        $rules = [
-            'email' => 'required|email',
-            'password' => 'required',
-        ];
-
-        $customMessages = [
-            'email.required' => __('Email is required'),
-            'password.required' => __('Password is required'),
-        ];
-        $this->validate($request, $rules, $customMessages);
-
         $credential = [
             'email' => $request->email,
             'password' => $request->password,
         ];
 
-        $admin = Admin::where('email', $request->email)->first();
+        $admin = AdminRepository::findByEmail($request->email);
 
         if ($admin) {
-            if ($admin->status == 'active') {
+            if ($admin->status === UserStatusEnum::ACTIVE) {
                 if (Hash::check($request->password, $admin->password)) {
                     if (Auth::guard('admin')->attempt($credential, $request->remember)) {
                         $notification = __('Logged in successfully.');
@@ -75,7 +66,6 @@ class AuthenticatedSessionController extends Controller
 
             return redirect()->back()->with($notification);
         }
-
     }
 
     /**

@@ -17,7 +17,7 @@ class QuizQuestion extends Model
     protected function casts(): array
     {
         return [
-            'type' => App\Enums\QuizQuestionTypeEnum::class,
+            'type' => \App\Enums\QuizQuestionTypeEnum::class,
         ];
     }
 

@@ -18,7 +18,7 @@ class Coupon extends Model
     protected function casts(): array
     {
         return [
-            'status' => App\Enums\CouponStatusEnum::class,
+            'status' => \App\Enums\CouponStatusEnum::class,
             'offer_percentage' => 'decimal:2',
             'min_price' => 'decimal:2',
             'expired_date' => 'date',

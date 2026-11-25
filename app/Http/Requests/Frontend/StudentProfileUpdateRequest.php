@@ -27,6 +27,7 @@ class StudentProfileUpdateRequest extends FormRequest
             'cover' => ['nullable', 'image', 'max:2000'],
             'phone' => ['nullable', 'string', 'max:30'],
             'age' => ['nullable', 'integer', 'max:150'],
+            'gender' => ['nullable', 'string', 'max:255'],
         ];
     }
 
@@ -48,6 +49,8 @@ class StudentProfileUpdateRequest extends FormRequest
             'phone.max' => __('The phone may not be greater than 30 characters'),
             'age.integer' => __('The age must be an integer'),
             'age.max' => __('The age may not be greater than 150'),
+            'gender.string' => __('The gender must be a string'),
+            'gender.max' => __('The gender may not be greater than 255 characters'),
         ];
     }
 

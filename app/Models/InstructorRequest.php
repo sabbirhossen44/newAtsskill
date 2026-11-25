@@ -16,7 +16,7 @@ class InstructorRequest extends Model
     protected function casts(): array
     {
         return [
-            'status' => App\Enums\InstructorRequestStatusEnum::class,
+            'status' => \App\Enums\InstructorRequestStatusEnum::class,
         ];
     }
 

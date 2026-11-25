@@ -86,3 +86,17 @@ if (! function_exists('getSessionCurrency')) {
         return (string) session('currency_code', config('app.currency', 'BDT'));
     }
 }
+
+/**
+ * Set the tab step for the form.
+ *
+ * Port of the old helper (old app/Helpers/helper.php): the student and
+ * instructor profile FormRequests and controllers call this, but the
+ * function was missing from the rebuild.
+ */
+if (! function_exists('setFormTabStep')) {
+    function setFormTabStep(string $name, string $step): void
+    {
+        session()->flash($name, $step);
+    }
+}

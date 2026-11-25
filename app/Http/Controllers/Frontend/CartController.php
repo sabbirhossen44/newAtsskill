@@ -3,236 +3,104 @@
 namespace App\Http\Controllers\Frontend;
 
 use App\Http\Controllers\Controller;
-use App\Models\Course;
-use App\Http\Controllers\Concerns\RedirectsWithMessage;
+use App\Http\Requests\Frontend\ApplyCouponRequest;
+use App\Repositories\CourseRepository;
+use App\Services\CartService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Session;
-use App\Models\Coupon;
-use App\Http\Controllers\Concerns\SessionCart;
-use App\Http\Controllers\Concerns\FormatsCurrency;
 
-class CartController extends Controller {
-    use FormatsCurrency;
-    use SessionCart;
-    use RedirectsWithMessage;
+class CartController extends Controller
+{
+    protected CartService $cart;
 
-    function index() {
-        // if cart is empty then remove coupon session
-        if ($this->cartContent()->count() == 0) {
-            $this->destroyCouponSession();
-        }
-
-        $products = $this->cartContent();
-        $cartTotal = $this->cartTotal();
-        $discountPercent = Session::has('offer_percentage') ? Session::get('offer_percentage') : 0;
-        $discountAmount = ($cartTotal * $discountPercent) / 100;
-        $total = $this->formatCurrency($cartTotal - $discountAmount);
-        $coupon = Session::has('coupon_code') ? Session::get('coupon_code') : '';
-        return view('frontend.pages.cart.index', compact('products', 'total', 'discountAmount', 'discountPercent', 'coupon'));
+    public function __construct(CartService $cart)
+    {
+        $this->cart = $cart;
     }
 
-    function addToCart(Request $request, string $id) {
-        if ($this->checkItemExist($id)) {
+    function index()
+    {
+        return view('frontend.pages.cart.index', $this->cart->summary());
+    }
+
+    function addToCart(Request $request, string $id)
+    {
+        if ($this->cart->containsCourse($id)) {
             return response(['status' => 'error', 'message' => 'Already added to cart!']);
         }
-        if ($this->checkIfOwnCourse($id)) {
+        if ($this->cart->isOwnCourse($id, auth('web')->user()?->id)) {
             return response(['status' => 'error', 'message' => 'You can not add to cart your own course!']);
         }
-        $course = Course::active()->where('id', $id)->first();
+        $course = CourseRepository::findActiveById($id);
 
-        $price = $course->discount > 0 ? $course->discount : $course->price;
+        $cartData = CartService::cartDataForCourse($course);
+        $this->cart->addCourse($course);
 
-        $cartData = [];
-        $cartData['id'] = $course->id;
-        $cartData['name'] = $course->title;
-        $cartData['qty'] = 1;
-        $cartData['price'] = $price;
-        $cartData['weight'] = 0;
-        $cartData['options']['image'] = $course->thumbnail;
-        $cartData['options']['slug'] = $course->slug;
-        $cartData['options']['real_price'] = $course->price;
-        $cartData['options']['discount_price'] = $course->discount;
+        $response = ['status' => 'success', 'message' => 'Added to cart successfully!', 'cart_count' => $this->cart->content()->count()];
 
-        $this->cartAdd($cartData);
-
-        $this->updateCouponDiscountAmount();
-
-        $response = ['status' => 'success', 'message' => 'Added to cart successfully!', 'cart_count' => $this->cartContent()->count()];
-
-        $settings = (object) \App\Services\SettingService::all();
-        $marketingSettings = (object) [];
-        if ($settings->google_tagmanager_status == 'active' && $marketingSettings->add_to_cart) {
-            $cartData['price'] = $this->formatCurrency($course->price);
-            $cartData['options']['real_price'] = $this->formatCurrency($course->price);
-            $cartData['options']['image'] = asset($course->thumbnail);
-            $cartData['options']['slug'] = route('course.show', $course->slug);
-            unset($cartData['id']);
-            $cartData['user'] = auth('web')->check() ? ['name' => auth('web')->user()->name, 'email' => auth('web')->user()->email] : 'guest';
-            $response['dataLayer'] = $cartData;
+        if ($dataLayer = $this->cart->addToCartDataLayer($course, $cartData)) {
+            $response['dataLayer'] = $dataLayer;
         }
 
         return response($response);
     }
 
-    function removeCartItem(string $rowId) {
-        $cartItem = $this->cartGet($rowId)?->toArray();
-        if ($cartItem) {
-            unset($cartItem['rowId'], $cartItem['id']);
-            $cartItem['price'] = $this->formatCurrency($cartItem['price']);
-            $cartItem['options']['real_price'] = $this->formatCurrency($cartItem['options']['real_price']);
-            $cartItem['options']['image'] = asset($cartItem['options']['image']);
-            $cartItem['options']['slug'] = route('course.show', $cartItem['options']['slug']);
-            $cartItem['user'] = auth('web')->check() ? [
-                'name'  => auth('web')->user()->name,
-                'email' => auth('web')->user()->email,
-            ] : 'guest';
+    function removeCartItem(string $rowId)
+    {
+        $removed = $this->cart->remove($rowId);
 
-            $settings = (object) \App\Services\SettingService::all();
-            $marketingSettings = (object) [];
-            if ($settings->google_tagmanager_status == 'active' && $marketingSettings->remove_from_cart) {
-                session()->put('removeFromCart', $cartItem);
-            }
-
+        if ($removed && $dataLayer = $this->cart->removeFromCartDataLayer($removed)) {
+            session()->put('removeFromCart', $dataLayer);
         }
-        $this->cartRemove($rowId);
+
         $notification = [
-            'messege'    => __('Item removed from cart!'),
+            'messege' => __('Item removed from cart!'),
             'alert-type' => 'success',
         ];
-
-        $this->updateCouponDiscountAmount();
 
         return redirect()->back()->with($notification);
     }
 
-    function cartTotal() {
-        $cartTotal = 0;
+    function applyCoupon(ApplyCouponRequest $request)
+    {
+        $result = $this->cart->applyCoupon($request->coupon);
 
-        $cartItems = $this->cartContent();
-        foreach ($cartItems as $key => $cartItem) {
-            $cartTotal += $cartItem->price;
+        if (! $result['ok']) {
+            return response()->json(['message' => $result['message']], 403);
         }
 
-        return $cartTotal;
+        return response()->json(array_merge(
+            ['message' => $result['message']],
+            $this->cart->couponResponseData()
+        ));
     }
 
-    function checkItemExist(string $id) {
-        $cartItems = $this->cartContent();
-        foreach ($cartItems as $key => $cartItem) {
-            if ($cartItem->id == $id) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    function checkIfOwnCourse(string $id) {
-        return Course::where('id', $id)->where('instructor_id', auth('web')->user()?->id)->exists();
-    }
-
-    function applyCoupon(Request $request) {
-        $rules = [
-            'coupon' => 'required',
-        ];
-        $customMessages = [
-            'coupon.required' => __('Coupon is required'),
-        ];
-
-        $request->validate($rules, $customMessages);
-
-        $coupon = Coupon::where(['coupon_code' => $request->coupon, 'status' => 'active'])->first();
-
-        if (!$coupon) {
-            $notification = __('Invalid coupon');
-
-            return response()->json(['message' => $notification], 403);
-        }
-
-        if ($coupon->expired_date < date('Y-m-d')) {
-            $notification = __('Coupon already expired');
-
-            return response()->json(['message' => $notification], 403);
-        }
-
-        if ($this->cartTotal() < $coupon->min_price) {
-            $notification = __('Minimum order amount should be :amount', ['amount' => $this->formatCurrency($coupon->min_price)]);
-
-            return response()->json(['message' => $notification], 403);
-        }
-        if ($this->cartTotal() <= 0) {
-            $notification = __('Cart amount should be greater than 0');
-
-            return response()->json(['message' => $notification], 403);
-        }
-
-        $discountAmount = $this->formatCurrency(($this->cartTotal() * $coupon->offer_percentage) / 100);
-        $total = $this->formatCurrency($this->cartTotal() - ($this->cartTotal() * $coupon->offer_percentage) / 100);
-
-        /** when coupon will be handle for particular seller or author , above condition will be used  */
-        Session::put('coupon_code', $coupon->coupon_code);
-        Session::put('offer_percentage', $coupon->offer_percentage);
-        Session::put('coupon_discount_amount', ($this->cartTotal() * $coupon->offer_percentage) / 100);
-
-        $notification = __('Coupon applied successful');
-
-        return response()->json(['message' => $notification, 'coupon_code' => $coupon->coupon_code, 'offer_percentage' => $coupon->offer_percentage, 'discount_amount' => $discountAmount, 'total' => $total]);
-    }
-
-    function updateCouponDiscountAmount() {
-        if (!Session::has('coupon_code')) {
-            return;
-        }
-
-        $coupon = Coupon::where(['coupon_code' => Session::get('coupon_code'), 'status' => 'active'])->first();
-        // update discount amount
-        Session::put('coupon_discount_amount', ($this->cartTotal() * $coupon->offer_percentage) / 100);
-    }
-
-    function removeCoupon() {
-
-        $this->destroyCouponSession();
+    function removeCoupon()
+    {
+        $this->cart->destroyCouponSession();
 
         $notification = [
-            'messege'    => __('Coupon removed successfully!'),
+            'messege' => __('Coupon removed successfully!'),
             'alert-type' => 'success',
         ];
+
         return redirect()->back()->with($notification);
     }
 
-    function destroyCouponSession() {
-        Session::forget('coupon_code');
-        Session::forget('offer_percentage');
-        Session::forget('coupon_discount_amount');
-    }
+    function buyNow(string $slug)
+    {
+        $course = CourseRepository::findActiveBySlugOrFail($slug);
 
-    function buyNow(string $slug) {
-        $course = Course::active()->where('slug', $slug)->firstOrFail();
-
-        if ($this->checkIfOwnCourse($course->id)) {
+        if ($this->cart->isOwnCourse((string) $course->id, auth('web')->user()?->id)) {
             return redirect()->back()->with(['messege' => 'You can not buy your own course!', 'alert-type' => 'error']);
         }
 
-        if (!$this->checkItemExist($course->id)) {
-            $price = $course->discount > 0 ? $course->discount : $course->price;
-
-            $cartData = [];
-            $cartData['id'] = $course->id;
-            $cartData['name'] = $course->title;
-            $cartData['qty'] = 1;
-            $cartData['price'] = $price;
-            $cartData['weight'] = 0;
-            $cartData['options']['image'] = $course->thumbnail;
-            $cartData['options']['slug'] = $course->slug;
-            $cartData['options']['real_price'] = $course->price;
-            $cartData['options']['discount_price'] = $course->discount;
-
-            $this->cartAdd($cartData);
-
-            $this->updateCouponDiscountAmount();
+        if (! $this->cart->containsCourse((string) $course->id)) {
+            $this->cart->addCourse($course);
         }
 
-        if (!auth('web')->check()) {
+        if (! auth('web')->check()) {
             session()->put('url.intended', route('checkout.index'));
+
             return redirect()->route('register');
         }
 

@@ -16,7 +16,7 @@ class OrderItem extends Model
     protected function casts(): array
     {
         return [
-            'item_type' => App\Enums\OrderItemTypeEnum::class,
+            'item_type' => \App\Enums\OrderItemTypeEnum::class,
             'price' => 'double',
         ];
     }

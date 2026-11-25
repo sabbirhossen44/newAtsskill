@@ -15,7 +15,7 @@ class NewsLetter extends Model
     protected function casts(): array
     {
         return [
-            'status' => App\Enums\NewsLetterStatusEnum::class,
+            'status' => \App\Enums\NewsLetterStatusEnum::class,
         ];
     }
 

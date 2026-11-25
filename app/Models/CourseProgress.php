@@ -19,7 +19,7 @@ class CourseProgress extends Model
         return [
             'watched' => 'boolean',
             'current' => 'boolean',
-            'type' => App\Enums\ChapterItemTypeEnum::class,
+            'type' => \App\Enums\ChapterItemTypeEnum::class,
         ];
     }
 

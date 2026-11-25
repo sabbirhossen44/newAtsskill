@@ -2,19 +2,15 @@
 
 namespace App\Http\Controllers\Admin\Auth;
 
-use App\Http\Controllers\Controller;
-use App\Models\Admin;
 use App\Http\Controllers\Concerns\SendsAppMail;
-use App\Http\Controllers\Concerns\PaymentGatewayInfo;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Str;
+use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\AdminForgotPasswordRequest;
+use App\Repositories\AdminRepository;
 use Illuminate\View\View;
 
 class PasswordResetLinkController extends Controller
 {
     use SendsAppMail;
-    use PaymentGatewayInfo;
 
     /**
      * Display the password reset link request view.
@@ -27,22 +23,12 @@ class PasswordResetLinkController extends Controller
     /**
      * Handle an incoming password reset link request.
      */
-    public function custom_forget_password(Request $request)
+    public function custom_forget_password(AdminForgotPasswordRequest $request)
     {
-
-        $setting = (object) \App\Services\SettingService::all();
-
-        $request->validate([
-            'email' => ['required', 'email'],
-        ], [
-            'email.required' => __('Email is required'),
-        ]);
-
-        $admin = Admin::where('email', $request->email)->first();
+        $admin = AdminRepository::findByEmail($request->input('email'));
 
         if ($admin) {
-            $admin->forget_password_token = Str::random(100);
-            $admin->save();
+            AdminRepository::issueForgetPasswordToken($admin);
 
             $this->sendUserForgetPasswordFromTrait($admin, 'admin.auth');
 
@@ -50,11 +36,11 @@ class PasswordResetLinkController extends Controller
             $notification = ['messege' => $notification, 'alert-type' => 'success'];
 
             return redirect()->back()->with($notification);
-        } else {
-            $notification = __('Email does not exist');
-            $notification = ['messege' => $notification, 'alert-type' => 'error'];
-
-            return redirect()->back()->with($notification);
         }
+
+        $notification = __('Email does not exist');
+        $notification = ['messege' => $notification, 'alert-type' => 'error'];
+
+        return redirect()->back()->with($notification);
     }
 }

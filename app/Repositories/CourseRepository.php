@@ -2,8 +2,24 @@
 
 namespace App\Repositories;
 
+use App\Enums\CourseApprovalEnum;
+use App\Enums\CourseStatusEnum;
 use App\Models\Course;
+use App\Models\CourseCategory;
+use App\Models\CourseChapterLesson;
+use App\Models\CourseDeleteRequest;
+use App\Models\CourseLanguage;
+use App\Models\CourseLevel;
 use App\Models\CourseMedia;
+use App\Models\CoursePartnerInstructor;
+use App\Models\CourseSelectedLanguage;
+use App\Models\CourseSelectedLevel;
+use App\Models\Quiz;
+use App\Models\User;
+use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 
 class CourseRepository
@@ -18,9 +34,313 @@ class CourseRepository
         return static::model()::query()->find($id);
     }
 
+    public static function findByIdOrFail(int $id): Course
+    {
+        return static::model()::query()->findOrFail($id);
+    }
+
     public static function findBySlug(string $slug): ?Course
     {
         return static::model()::query()->where('slug', $slug)->first();
+    }
+
+    /**
+     * Public course-listing filter options (cached 24h, as the old
+     * CoursePageController did).
+     */
+    public static function filterOptions(): array
+    {
+        return [
+            'categories' => CourseCategoryRepository::activeRootCategories(),
+            'languages' => Cache::remember('course_page_languages', 1440, function () {
+                return CourseLanguage::where('status', 1)->get();
+            }),
+            'levels' => Cache::remember('course_page_levels', 1440, function () {
+                return CourseLevel::where('status', 1)->with('translation')->get();
+            }),
+        ];
+    }
+
+    /**
+     * Filtered, paginated public course list for fetchCourses().
+     * Query chain moved verbatim from the old controller, including
+     * the ungrouped orWhere() in the free-price branch.
+     */
+    public static function paginateFiltered(Request $request): LengthAwarePaginator
+    {
+        $query = static::model()::query();
+        $query->where(['is_approved' => CourseApprovalEnum::APPROVED->value, 'status' => CourseStatusEnum::ACTIVE->value]);
+        $query->whereHas('category', function ($q) use ($request) {
+            $q->where('status', 1);
+        });
+
+        $query->when($request->search, function ($q) use ($request) {
+            $q->where('title', 'like', '%'.$request->search.'%');
+        });
+
+        $query->when($request->main_category, function ($q) use ($request) {
+            $q->whereHas('category', function ($q) use ($request) {
+                $q->whereHas('parentCategory', function ($q) use ($request) {
+                    $q->where('slug', $request->main_category);
+                });
+            });
+        });
+
+        $query->when($request->category && $request->filled('category'), function ($q) use ($request) {
+            $categoriesIds = is_array($request->category) ? $request->category : explode(',', $request->category);
+            $q->whereIn('category_id', $categoriesIds);
+        });
+
+        $query->when($request->language && $request->filled('language'), function ($q) use ($request) {
+            $languagesIds = is_array($request->language) ? $request->language : explode(',', $request->language);
+            $q->whereHas('languages', function ($q) use ($languagesIds) {
+                $q->whereIn('language_id', $languagesIds);
+            });
+        });
+
+        $query->when($request->price, function ($q) use ($request) {
+            if ($request->price == 'paid') {
+                $q->where('price', '>', 0);
+            } else {
+                $q->where('price', 0)->orWhere('price', null);
+            }
+        });
+
+        $query->when($request->level, function ($q) use ($request) {
+            $levelsIds = is_array($request->level) ? $request->level : explode(',', $request->level);
+            $q->whereHas('levels', function ($q) use ($levelsIds) {
+                $q->whereIn('level_id', $levelsIds);
+            });
+        });
+
+        $query->with(['instructor:id,name', 'enrollments', 'category.translation']);
+        $query->orderBy('created_at', $request->order && $request->filled('order') ? $request->order : 'desc');
+
+        return $query->paginate(12);
+    }
+
+    /**
+     * Course details with chapters/items/lessons/quizzes and the
+     * approved-review count (cached 24h per slug, as before).
+     */
+    public static function findBySlugWithDetailsOrFail(string $slug): Course
+    {
+        return Cache::remember('course_details_'.$slug, 1440, function () use ($slug) {
+            return static::model()::active()->with(['chapters' => function ($query) {
+                $query->orderBy('order', 'asc')->with(['chapterItems', 'chapterItems.lesson', 'chapterItems.quiz']);
+            }])
+                ->withCount(['reviews' => function ($query) {
+                    $query->where('status', 1)->whereHas('course')->whereHas('user');
+                }])
+                ->where('slug', $slug)->firstOrFail();
+        });
+    }
+
+    public static function lessonCount(Course $course): int
+    {
+        return Cache::remember('course_lesson_count_'.$course->slug, 1440, function () use ($course) {
+            return CourseChapterLesson::where('course_id', $course->id)->count();
+        });
+    }
+
+    public static function quizCount(Course $course): int
+    {
+        return Cache::remember('course_quiz_count_'.$course->slug, 1440, function () use ($course) {
+            return Quiz::where('course_id', $course->id)->count();
+        });
+    }
+
+    public static function findWithTrashedById(int $id): ?Course
+    {
+        return static::model()::query()->withTrashed()->find($id);
+    }
+
+    public static function activeCourses(): Collection
+    {
+        return static::model()::query()->active()->get();
+    }
+
+    public static function findActiveById(string $id): ?Course
+    {
+        return static::model()::query()->active()->where('id', $id)->first();
+    }
+
+    public static function findActiveBySlugOrFail(string $slug): Course
+    {
+        return static::model()::query()->active()->where('slug', $slug)->firstOrFail();
+    }
+
+    public static function findActiveBySlugWithContent(string $slug): ?Course
+    {
+        return static::model()::query()->active()->with([
+            'chapters',
+            'chapters.chapterItems',
+            'chapters.chapterItems.lesson',
+            'chapters.chapterItems.quiz',
+        ])->withTrashed()->where('slug', $slug)->first();
+    }
+
+    public static function isOwnCourse(string $id, ?int $userId): bool
+    {
+        return static::model()::query()->where('id', $id)->where('instructor_id', $userId)->exists();
+    }
+
+    public static function instructorCourseIds(int $instructorId): array
+    {
+        return static::model()::query()->where('instructor_id', $instructorId)->pluck('id')->toArray();
+    }
+
+    public static function countForInstructor(int $instructorId): int
+    {
+        return static::model()::query()->where('instructor_id', $instructorId)->count();
+    }
+
+    public static function countPendingForInstructor(int $instructorId): int
+    {
+        return static::model()::query()->where('instructor_id', $instructorId)
+            ->where(['status' => 'pending', 'is_approved' => 'pending'])->count();
+    }
+
+    public static function paginateForInstructor(int $instructorId, int $perPage = 10)
+    {
+        return static::model()::query()->where('instructor_id', $instructorId)->paginate($perPage);
+    }
+
+    /**
+     * Instructor course wizard, step 1: create a new course or update the
+     * basic fields of the existing one. $data is the validated step-1 data
+     * plus slug / edit_mode / id from the request.
+     */
+    public static function storeWizard(array $data, int $instructorId): Course
+    {
+        if (($data['edit_mode'] ?? 0) == 1) {
+            $course = static::model()::query()->findOrFail($data['id']);
+        } else {
+            $course = new Course();
+        }
+
+        $course->title = $data['title'];
+        $course->slug = $data['slug'];
+        $course->instructor_id = $instructorId;
+        $course->seo_description = $data['seo_description'] ?? null;
+        $course->thumbnail = $data['thumbnail'];
+        $course->demo_video_storage = $data['demo_video_storage'] ?? null;
+        $course->demo_video_source = ($data['demo_video_storage'] ?? null) == 'upload'
+            ? ($data['upload_path'] ?? null)
+            : ($data['external_path'] ?? null);
+        $course->price = $data['price'];
+        $course->discount = $data['discount_price'] ?? null;
+        $course->description = $data['description'];
+        $course->save();
+
+        return $course;
+    }
+
+    /** Wizard step 2 data: categories, levels, languages and the course's category. */
+    public static function moreInfoData(int $courseId): array
+    {
+        $course = static::model()::query()->findOrFail($courseId);
+
+        return [
+            'courseId' => $courseId,
+            'course' => $course,
+            'categories' => CourseCategory::where('status', 1)->get(),
+            'levels' => CourseLevel::with(['translation'])->where('status', 1)->get(),
+            'category' => CourseCategory::find($course->category_id),
+            'languages' => CourseLanguage::where('status', 1)->get(),
+        ];
+    }
+
+    /** Wizard step 2 save: course flags + partner instructors / levels / languages. */
+    public static function updateMoreInfo(Course $course, array $data): void
+    {
+        $course->capacity = $data['capacity'] ?? null;
+        $course->duration = $data['course_duration'];
+        $course->category_id = $data['category'];
+        $course->qna = $data['qna'] ?? null;
+        $course->downloadable = $data['downloadable'] ?? null;
+        $course->certificate = $data['certificate'] ?? null;
+        $course->partner_instructor = $data['partner_instructor'] ?? null;
+        $course->save();
+
+        // delete unselected partner instructor
+        CoursePartnerInstructor::where('course_id', $course->id)
+            ->whereNotIn('instructor_id', $data['partner_instructors'] ?? [])->delete();
+
+        // insert partner instructor
+        foreach ($data['partner_instructors'] ?? [] as $instructor) {
+            CoursePartnerInstructor::updateOrCreate(
+                ['course_id' => $course->id, 'instructor_id' => $instructor],
+            );
+        }
+
+        // insert levels
+        CourseSelectedLevel::where('course_id', $course->id)
+            ->whereNotIn('level_id', $data['levels'] ?? [])->delete();
+
+        foreach ($data['levels'] ?? [] as $level) {
+            CourseSelectedLevel::updateOrCreate(
+                ['course_id' => $course->id, 'level_id' => $level],
+            );
+        }
+
+        //insert languages
+        CourseSelectedLanguage::where('course_id', $course->id)
+            ->whereNotIn('language_id', $data['languages'] ?? [])->delete();
+
+        foreach ($data['languages'] ?? [] as $language) {
+            CourseSelectedLanguage::updateOrCreate(
+                ['course_id' => $course->id, 'language_id' => $language],
+            );
+        }
+    }
+
+    /** Wizard step 4 save: reviewer message + status. */
+    public static function updateFinish(Course $course, array $data): void
+    {
+        $course->message_for_reviewer = $data['message_for_reviewer'] ?? null;
+        $course->status = $data['status'];
+        $course->save();
+    }
+
+    /** Partner-instructor search for the wizard (excludes the current user). */
+    public static function instructorsForPartner(string $query, int $excludeId)
+    {
+        return User::where('role', 'instructor')
+            ->where(function ($q) use ($query) {
+                $q->where('name', 'like', '%'.$query.'%')
+                    ->orWhere('email', 'like', '%'.$query.'%');
+            })
+            ->where('id', '!=', $excludeId)
+            ->get();
+    }
+
+    /** Category filter options for the wizard (levels / category / languages). */
+    public static function filtersForCategory(string $id): array
+    {
+        return [
+            'levels' => CourseLevel::with(['translation'])->where('status', 1)->get(),
+            'category' => CourseCategory::find($id),
+            'languages' => CourseLanguage::where('status', 1)->get(),
+        ];
+    }
+
+    /**
+     * Course delete request. Returns false when a request already exists
+     * for the course, true when a new one was created.
+     */
+    public static function createDeleteRequest(Course $course, string $message): bool
+    {
+        if (CourseDeleteRequest::where('course_id', $course->id)->exists()) {
+            return false;
+        }
+
+        $deleteRequest = new CourseDeleteRequest();
+        $deleteRequest->course_id = $course->id;
+        $deleteRequest->message = $message;
+        $deleteRequest->save();
+
+        return true;
     }
 
     public static function storeByRequest(array $data): Course

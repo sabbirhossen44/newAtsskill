@@ -18,7 +18,7 @@ class CourseChapterItem extends Model
     protected function casts(): array
     {
         return [
-            'type' => App\Enums\ChapterItemTypeEnum::class,
+            'type' => \App\Enums\ChapterItemTypeEnum::class,
         ];
     }
 

@@ -23,12 +23,12 @@
                     @forelse ($courses ?? [] as $item)
                         <tr>
                             <td>{{ $loop->iteration }}</td>
-                            <td>{{ $item->title ?? '' }}</td><td>{{ $item->instructor->name ?? '' }}</td><td>{{ $item->category->translation->name ?? '' }}</td><td>{{ '৳' . number_format($item->price ?? 0, 0) }}</td><td>{{ $item->is_approved ?? '' }}</td><td>
+                            <td>{{ $item->title ?? '' }}</td><td>{{ $item->instructor->name ?? '' }}</td><td>{{ $item->category->translation->name ?? '' }}</td><td>{{ '৳' . number_format($item->price ?? 0, 0) }}</td><td>{{ $item->is_approved?->value ?? '' }}</td><td>
                     <form action="{{ route('admin.courses.status-update', $item->id) }}" method="POST" class="d-inline status-form">
                         @csrf @method('PUT')
                         <select name="status" class="form-select form-select-sm status-select" onchange="this.form.submit()">
-                            <option value="active" {{ ($item->status ?? '') == 'active' ? 'selected' : '' }}>{{ __('Active') }}</option>
-                            <option value="inactive" {{ ($item->status ?? '') == 'inactive' ? 'selected' : '' }}>{{ __('Inactive') }}</option>
+                            <option value="active" {{ ($item->status?->value ?? '') == 'active' ? 'selected' : '' }}>{{ __('Active') }}</option>
+                            <option value="inactive" {{ ($item->status?->value ?? '') == 'inactive' ? 'selected' : '' }}>{{ __('Inactive') }}</option>
                         </select>
                     </form>
                 </td><td class="text-nowrap">

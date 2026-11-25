@@ -18,7 +18,7 @@ class Order extends Model
     protected function casts(): array
     {
         return [
-            'status' => App\Enums\OrderStatusEnum::class,
+            'status' => \App\Enums\OrderStatusEnum::class,
             'has_coupon' => 'boolean',
             'payable_amount' => 'double',
             'gateway_charge' => 'double',

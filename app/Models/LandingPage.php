@@ -16,7 +16,7 @@ class LandingPage extends Model
     protected function casts(): array
     {
         return [
-            'status' => App\Enums\LandingPageStatusEnum::class,
+            'status' => \App\Enums\LandingPageStatusEnum::class,
         ];
     }
 
