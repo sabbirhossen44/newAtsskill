@@ -7,7 +7,6 @@ use App\Http\Requests\Admin\LanguageRequest;
 use App\Models\Language;
 use App\Repositories\LanguageRepository;
 use Illuminate\Http\Request;
-use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\File;
 
 /**
@@ -20,7 +19,6 @@ class LanguageController extends Controller
 {
     public function index(Request $request)
     {
-        Paginator::useBootstrap();
         $languages = LanguageRepository::paginateAdmin($request->input('keyword'), $this->perPage($request));
 
         return view('admin.language.index', ['languages' => $languages, 'items' => $languages]);

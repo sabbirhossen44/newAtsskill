@@ -7,13 +7,11 @@ use App\Http\Requests\Admin\BadgeRequest;
 use App\Repositories\BadgeRepository;
 use App\Services\UploadService;
 use Illuminate\Http\Request;
-use Illuminate\Pagination\Paginator;
 
 class BadgesController extends Controller
 {
     public function index(Request $request)
     {
-        Paginator::useBootstrap();
         $badges = BadgeRepository::paginateAdmin($request->input('keyword') ?? $request->input('search'), $this->perPage($request));
         return view('admin.badges.index', ['badges' => $badges, 'items' => $badges]);
     }

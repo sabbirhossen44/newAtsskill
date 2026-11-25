@@ -12,7 +12,6 @@ use App\Repositories\UserEducationRepository;
 use App\Repositories\UserExperienceRepository;
 use App\Repositories\UserRepository;
 use Illuminate\Http\Request;
-use Illuminate\Pagination\Paginator;
 
 /**
  * Admin customer (student) management. Only the routes the rebuilt
@@ -24,8 +23,6 @@ class CustomerController extends Controller
 {
     protected function paginateCustomers(Request $request, $query)
     {
-        Paginator::useBootstrap();
-
         return $query->where('role', UserRoleEnum::STUDENT->value)
             ->latest()->paginate($this->perPage($request));
     }

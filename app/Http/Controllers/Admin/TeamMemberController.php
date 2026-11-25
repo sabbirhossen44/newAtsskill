@@ -6,13 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\TeamMemberRequest;
 use App\Repositories\TeamMemberRepository;
 use Illuminate\Http\Request;
-use Illuminate\Pagination\Paginator;
 
 class TeamMemberController extends Controller
 {
     public function index(Request $request)
     {
-        Paginator::useBootstrap();
         $teamMembers = TeamMemberRepository::paginate($this->perPage($request));
 
         return view('admin.team-members.index', compact('teamMembers'));

@@ -6,13 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\CouponRequest;
 use App\Repositories\CouponRepository;
 use Illuminate\Http\Request;
-use Illuminate\Pagination\Paginator;
 
 class CouponController extends Controller
 {
     public function index(Request $request)
     {
-        Paginator::useBootstrap();
         $coupons = CouponRepository::paginateAdmin($request->input('keyword') ?? $request->input('search'), $this->perPage($request));
         return view('admin.coupon.index', ['coupons' => $coupons, 'items' => $coupons]);
     }

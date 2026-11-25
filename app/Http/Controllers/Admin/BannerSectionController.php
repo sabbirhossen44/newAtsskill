@@ -7,13 +7,11 @@ use App\Http\Requests\Admin\SectionRequest;
 use App\Repositories\BannerSectionRepository;
 use App\Services\UploadService;
 use Illuminate\Http\Request;
-use Illuminate\Pagination\Paginator;
 
 class BannerSectionController extends Controller
 {
     public function index(Request $request)
     {
-        Paginator::useBootstrap();
         $sections = BannerSectionRepository::paginateAdmin($request->input('keyword') ?? $request->input('search'), $this->perPage($request));
         return view('admin.banner-section.index', ['sections' => $sections, 'items' => $sections]);
     }

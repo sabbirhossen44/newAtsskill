@@ -6,13 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\CourseLanguageRequest;
 use App\Repositories\CourseLanguageRepository;
 use Illuminate\Http\Request;
-use Illuminate\Pagination\Paginator;
 
 class CourseLanguageController extends Controller
 {
     public function index(Request $request)
     {
-        Paginator::useBootstrap();
         $languages = CourseLanguageRepository::paginateAdmin($request->input('keyword') ?? $request->input('search'), $this->perPage($request));
         return view('admin.course-language.index', ['languages' => $languages, 'items' => $languages]);
     }

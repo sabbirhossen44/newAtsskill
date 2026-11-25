@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Models\Setting;
 use App\Services\SettingService;
 use Illuminate\Http\Request;
-use Illuminate\Pagination\Paginator;
 
 /**
  * Site colours as key/value settings rows (the old controller stored
@@ -20,7 +19,6 @@ class SiteColorSettingController extends Controller
 
     public function index(Request $request)
     {
-        Paginator::useBootstrap();
         $items = Setting::query()->whereIn('key', $this->keys)->latest()->paginate($this->perPage($request));
 
         return view('admin.site-color-setting.index', ['items' => $items]);

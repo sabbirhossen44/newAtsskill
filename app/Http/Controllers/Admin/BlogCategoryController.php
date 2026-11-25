@@ -6,13 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\BlogCategoryStoreRequest;
 use App\Repositories\BlogCategoryRepository;
 use Illuminate\Http\Request;
-use Illuminate\Pagination\Paginator;
 
 class BlogCategoryController extends Controller
 {
     public function index(Request $request)
     {
-        Paginator::useBootstrap();
         $categories = BlogCategoryRepository::paginateAdmin($request->input('keyword') ?? $request->input('search'), $this->perPage($request));
         return view('admin.blog-category.index', ['categories' => $categories, 'items' => $categories]);
     }

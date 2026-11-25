@@ -7,13 +7,11 @@ use App\Http\Requests\Admin\SectionRequest;
 use App\Repositories\FooterSettingRepository;
 use App\Services\UploadService;
 use Illuminate\Http\Request;
-use Illuminate\Pagination\Paginator;
 
 class FooterSettingController extends Controller
 {
     public function index(Request $request)
     {
-        Paginator::useBootstrap();
         $footerSettings = FooterSettingRepository::paginateAdmin($request->input('keyword') ?? $request->input('search'), $this->perPage($request));
         return view('admin.footersetting.index', ['footerSettings' => $footerSettings, 'items' => $footerSettings]);
     }

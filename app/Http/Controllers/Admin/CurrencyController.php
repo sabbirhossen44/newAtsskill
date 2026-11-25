@@ -6,13 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\CurrencyRequest;
 use App\Repositories\CurrencyRepository;
 use Illuminate\Http\Request;
-use Illuminate\Pagination\Paginator;
 
 class CurrencyController extends Controller
 {
     public function index(Request $request)
     {
-        Paginator::useBootstrap();
         $currencies = CurrencyRepository::paginateAdmin($request->input('keyword') ?? $request->input('search'), $this->perPage($request));
         return view('admin.currency.index', ['currencies' => $currencies, 'items' => $currencies]);
     }

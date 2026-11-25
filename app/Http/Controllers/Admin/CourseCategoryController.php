@@ -8,13 +8,11 @@ use App\Http\Requests\Admin\CourseCategoryUpdateRequest;
 use App\Repositories\CourseCategoryRepository;
 use App\Services\UploadService;
 use Illuminate\Http\Request;
-use Illuminate\Pagination\Paginator;
 
 class CourseCategoryController extends Controller
 {
     public function index(Request $request)
     {
-        Paginator::useBootstrap();
         $categories = CourseCategoryRepository::paginateAdmin($request->input('keyword') ?? $request->input('search'), $this->perPage($request));
         return view('admin.course-category.index', ['categories' => $categories, 'items' => $categories]);
     }

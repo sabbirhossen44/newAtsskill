@@ -6,13 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\CountryStoreRequest;
 use App\Repositories\CountryRepository;
 use Illuminate\Http\Request;
-use Illuminate\Pagination\Paginator;
 
 class CountryController extends Controller
 {
     public function index(Request $request)
     {
-        Paginator::useBootstrap();
         $countries = CountryRepository::paginateAdmin($request->input('keyword') ?? $request->input('search'), $this->perPage($request));
         return view('admin.country.index', ['countries' => $countries, 'items' => $countries]);
     }

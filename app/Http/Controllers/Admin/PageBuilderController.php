@@ -6,13 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\PageBuilderRequest;
 use App\Repositories\PageRepository;
 use Illuminate\Http\Request;
-use Illuminate\Pagination\Paginator;
 
 class PageBuilderController extends Controller
 {
     public function index(Request $request)
     {
-        Paginator::useBootstrap();
         $pages = PageRepository::paginateAdmin($request->input('keyword') ?? $request->input('search'), $this->perPage($request));
         return view('admin.page-builder.index', ['pages' => $pages, 'items' => $pages]);
     }

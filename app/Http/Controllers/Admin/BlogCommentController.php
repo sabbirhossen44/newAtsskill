@@ -6,13 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\BlogCommentRequest;
 use App\Repositories\BlogCommentRepository;
 use Illuminate\Http\Request;
-use Illuminate\Pagination\Paginator;
 
 class BlogCommentController extends Controller
 {
     public function index(Request $request)
     {
-        Paginator::useBootstrap();
         $comments = BlogCommentRepository::paginateAdmin($request->input('keyword') ?? $request->input('search'), $this->perPage($request));
         return view('admin.blog-comment.index', ['comments' => $comments, 'items' => $comments]);
     }

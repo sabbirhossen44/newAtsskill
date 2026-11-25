@@ -6,13 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\CourseReviewRequest;
 use App\Repositories\CourseReviewRepository;
 use Illuminate\Http\Request;
-use Illuminate\Pagination\Paginator;
 
 class CourseReviewController extends Controller
 {
     public function index(Request $request)
     {
-        Paginator::useBootstrap();
         $reviews = CourseReviewRepository::paginateAdmin($request->input('keyword') ?? $request->input('search'), $this->perPage($request));
         return view('admin.course-review.index', ['reviews' => $reviews, 'items' => $reviews]);
     }

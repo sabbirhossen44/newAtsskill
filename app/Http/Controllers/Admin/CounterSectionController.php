@@ -6,13 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\CounterSectionRequest;
 use App\Repositories\CounterSectionRepository;
 use Illuminate\Http\Request;
-use Illuminate\Pagination\Paginator;
 
 class CounterSectionController extends Controller
 {
     public function index(Request $request)
     {
-        Paginator::useBootstrap();
         $sections = CounterSectionRepository::paginateAdmin($request->input('keyword') ?? $request->input('search'), $this->perPage($request));
         return view('admin.counter-section.index', ['sections' => $sections, 'items' => $sections]);
     }

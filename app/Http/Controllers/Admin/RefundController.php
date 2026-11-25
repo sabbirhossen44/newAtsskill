@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Repositories\RefundRepository;
-use Illuminate\Pagination\Paginator;
 
 /**
  * Refunds. The rebuilt refund views are stubs ("Refund module is
@@ -16,7 +15,6 @@ class RefundController extends Controller
 {
     public function index()
     {
-        Paginator::useBootstrap();
         $refund_requests = RefundRepository::paginateAdmin(null, 15);
 
         return view('admin.refund.index', ['refund_requests' => $refund_requests]);

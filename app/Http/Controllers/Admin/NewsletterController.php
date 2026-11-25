@@ -7,7 +7,6 @@ use App\Jobs\SendMailToNewsletterJob;
 use App\Models\NewsLetter;
 use App\Repositories\NewsLetterRepository;
 use Illuminate\Http\Request;
-use Illuminate\Pagination\Paginator;
 
 /**
  * Newsletter subscribers (admin side). Sending mail dispatches the
@@ -18,7 +17,6 @@ class NewsletterController extends Controller
 {
     public function index(Request $request)
     {
-        Paginator::useBootstrap();
         $subscribers = NewsLetterRepository::paginateAdmin($request->input('keyword'), $this->perPage($request));
         $newsletters = $subscribers;
 

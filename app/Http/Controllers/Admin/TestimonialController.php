@@ -7,13 +7,11 @@ use App\Http\Requests\Admin\TestimonialRequest;
 use App\Repositories\TestimonialRepository;
 use App\Services\UploadService;
 use Illuminate\Http\Request;
-use Illuminate\Pagination\Paginator;
 
 class TestimonialController extends Controller
 {
     public function index(Request $request)
     {
-        Paginator::useBootstrap();
         $testimonials = TestimonialRepository::paginateAdmin($request->input('keyword') ?? $request->input('search'), $this->perPage($request));
         return view('admin.testimonial.index', ['testimonials' => $testimonials, 'items' => $testimonials]);
     }

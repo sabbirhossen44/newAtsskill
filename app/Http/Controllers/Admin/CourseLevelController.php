@@ -6,13 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\CourseLevelRequest;
 use App\Repositories\CourseLevelRepository;
 use Illuminate\Http\Request;
-use Illuminate\Pagination\Paginator;
 
 class CourseLevelController extends Controller
 {
     public function index(Request $request)
     {
-        Paginator::useBootstrap();
         $levels = CourseLevelRepository::paginateAdmin($request->input('keyword') ?? $request->input('search'), $this->perPage($request));
         return view('admin.course-level.index', ['levels' => $levels, 'items' => $levels]);
     }

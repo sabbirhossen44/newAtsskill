@@ -9,7 +9,6 @@ use App\Models\Course;
 use App\Models\Enrollment;
 use App\Repositories\OrderRepository;
 use Illuminate\Http\Request;
-use Illuminate\Pagination\Paginator;
 
 /**
  * Admin orders. Old behaviour kept, including the wallet/enrolment
@@ -22,7 +21,6 @@ class OrderController extends Controller
 {
     public function index(Request $request)
     {
-        Paginator::useBootstrap();
         $orders = OrderRepository::paginateAdminOrders($request->input('keyword'), $this->perPage($request));
 
         return view('admin.order.index', ['orders' => $orders, 'title' => __('Order History')]);
@@ -30,7 +28,6 @@ class OrderController extends Controller
 
     public function pending_order()
     {
-        Paginator::useBootstrap();
         $orders = OrderRepository::paginatePendingOrders($this->perPage(request()));
 
         return view('admin.order.pending-orders', ['orders' => $orders, 'title' => __('Pending Order')]);

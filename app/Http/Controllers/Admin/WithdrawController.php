@@ -9,7 +9,6 @@ use App\Models\WithdrawRequest;
 use App\Repositories\WithdrawMethodRepository;
 use App\Repositories\WithdrawRepository;
 use Illuminate\Http\Request;
-use Illuminate\Pagination\Paginator;
 
 /**
  * Withdraw methods + withdraw requests. Approving a request credits
@@ -21,7 +20,6 @@ class WithdrawController extends Controller
 {
     public function index(Request $request)
     {
-        Paginator::useBootstrap();
         $methods = WithdrawMethodRepository::paginateAdmin($request->input('keyword'), $this->perPage($request));
 
         return view('admin.withdraw-method.index', ['methods' => $methods, 'items' => $methods]);
@@ -72,7 +70,6 @@ class WithdrawController extends Controller
 
     public function withdraw_list(Request $request)
     {
-        Paginator::useBootstrap();
         $withdraws = WithdrawRequest::with(['user'])->latest()->paginate($this->perPage($request));
 
         return view('admin.withdraw.index', ['withdraws' => $withdraws, 'items' => $withdraws]);
@@ -80,7 +77,6 @@ class WithdrawController extends Controller
 
     public function pending_withdraw_list(Request $request)
     {
-        Paginator::useBootstrap();
         $withdraws = WithdrawRequest::with(['user'])->where('status', WithdrawStatusEnum::PENDING->value)->latest()->paginate($this->perPage($request));
 
         return view('admin.withdraw.pending', ['withdraws' => $withdraws, 'items' => $withdraws]);

@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Models\Setting;
 use App\Services\SettingService;
 use Illuminate\Http\Request;
-use Illuminate\Pagination\Paginator;
 
 /**
  * Site appearance as key/value settings rows (there is no
@@ -20,7 +19,6 @@ class SiteAppearanceController extends Controller
 
     public function index(Request $request)
     {
-        Paginator::useBootstrap();
         $items = Setting::query()->whereIn('key', $this->keys)->latest()->paginate($this->perPage($request));
 
         return view('admin.site-appearance.index', ['items' => $items]);

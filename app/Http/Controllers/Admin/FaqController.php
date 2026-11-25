@@ -6,13 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\FaqRequest;
 use App\Repositories\FaqRepository;
 use Illuminate\Http\Request;
-use Illuminate\Pagination\Paginator;
 
 class FaqController extends Controller
 {
     public function index(Request $request)
     {
-        Paginator::useBootstrap();
         $faqs = FaqRepository::paginateAdmin($request->input('keyword') ?? $request->input('search'), $this->perPage($request));
         return view('admin.faq.index', ['faqs' => $faqs, 'items' => $faqs]);
     }

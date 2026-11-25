@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Models\Course;
 use App\Repositories\CourseDeleteRequestRepository;
 use Illuminate\Http\Request;
-use Illuminate\Pagination\Paginator;
 
 /**
  * Course delete requests. Approving (`action=inactive`) soft-deletes
@@ -17,7 +16,6 @@ class CourseDeleteRequestController extends Controller
 {
     public function index()
     {
-        Paginator::useBootstrap();
         $deleteRequests = CourseDeleteRequestRepository::paginateAdmin(null, $this->perPage(request()));
         $messages = $deleteRequests;
 

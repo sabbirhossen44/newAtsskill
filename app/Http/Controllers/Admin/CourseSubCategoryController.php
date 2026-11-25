@@ -7,7 +7,6 @@ use App\Http\Requests\Admin\CourseSubCategoryRequest;
 use App\Models\CourseCategory;
 use App\Repositories\CourseCategoryRepository;
 use Illuminate\Http\Request;
-use Illuminate\Pagination\Paginator;
 
 /**
  * Course sub-categories: children of a parent category. Routes keep
@@ -18,7 +17,6 @@ class CourseSubCategoryController extends Controller
 {
     public function index(Request $request, $parent_id)
     {
-        Paginator::useBootstrap();
         $parentId = (int) $parent_id;
         $subCategories = CourseCategoryRepository::paginateSubCategories($parentId, $this->perPage($request));
         $parentCategories = CourseCategory::whereNull('parent_id')->get();

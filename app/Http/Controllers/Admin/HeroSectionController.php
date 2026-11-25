@@ -7,13 +7,11 @@ use App\Http\Requests\Admin\SectionRequest;
 use App\Repositories\HeroSectionRepository;
 use App\Services\UploadService;
 use Illuminate\Http\Request;
-use Illuminate\Pagination\Paginator;
 
 class HeroSectionController extends Controller
 {
     public function index(Request $request)
     {
-        Paginator::useBootstrap();
         $sections = HeroSectionRepository::paginateAdmin($request->input('keyword') ?? $request->input('search'), $this->perPage($request));
         return view('admin.hero-section.index', ['sections' => $sections, 'items' => $sections]);
     }

@@ -7,13 +7,11 @@ use App\Http\Requests\Admin\BlogPostRequest;
 use App\Repositories\BlogRepository;
 use App\Services\UploadService;
 use Illuminate\Http\Request;
-use Illuminate\Pagination\Paginator;
 
 class BlogController extends Controller
 {
     public function index(Request $request)
     {
-        Paginator::useBootstrap();
         $blogs = BlogRepository::paginateAdmin($request->input('keyword') ?? $request->input('search'), $this->perPage($request));
         return view('admin.blogs.index', ['blogs' => $blogs, 'items' => $blogs]);
     }

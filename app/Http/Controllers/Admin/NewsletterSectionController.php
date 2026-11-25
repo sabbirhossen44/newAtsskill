@@ -7,13 +7,11 @@ use App\Http\Requests\Admin\SectionRequest;
 use App\Repositories\NewsletterSectionRepository;
 use App\Services\UploadService;
 use Illuminate\Http\Request;
-use Illuminate\Pagination\Paginator;
 
 class NewsletterSectionController extends Controller
 {
     public function index(Request $request)
     {
-        Paginator::useBootstrap();
         $sections = NewsletterSectionRepository::paginateAdmin($request->input('keyword') ?? $request->input('search'), $this->perPage($request));
         return view('admin.newsletter-section.index', ['sections' => $sections, 'items' => $sections]);
     }

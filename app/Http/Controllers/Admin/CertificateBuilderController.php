@@ -7,13 +7,11 @@ use App\Http\Requests\Admin\CertificateUpdateRequest;
 use App\Repositories\CertificateBuilderRepository;
 use App\Services\UploadService;
 use Illuminate\Http\Request;
-use Illuminate\Pagination\Paginator;
 
 class CertificateBuilderController extends Controller
 {
     public function index(Request $request)
     {
-        Paginator::useBootstrap();
         $certificates = CertificateBuilderRepository::paginateAdmin($request->input('keyword') ?? $request->input('search'), $this->perPage($request));
         $certificate = \App\Repositories\CertificateBuilderRepository::findById(1);
                 $certificateItems = \App\Models\CertificateBuilderItem::all();

@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Repositories\ContactMessageRepository;
-use Illuminate\Pagination\Paginator;
 
 /**
  * Contact messages (admin side): list, show, delete.
@@ -14,7 +13,6 @@ class ContactMessageController extends Controller
 {
     public function index()
     {
-        Paginator::useBootstrap();
         $messages = ContactMessageRepository::paginateAdmin(null, $this->perPage(request()));
 
         return view('admin.contact-message.index', ['messages' => $messages, 'items' => $messages]);

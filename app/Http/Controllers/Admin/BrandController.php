@@ -7,13 +7,11 @@ use App\Http\Requests\Admin\BrandRequest;
 use App\Repositories\BrandRepository;
 use App\Services\UploadService;
 use Illuminate\Http\Request;
-use Illuminate\Pagination\Paginator;
 
 class BrandController extends Controller
 {
     public function index(Request $request)
     {
-        Paginator::useBootstrap();
         $brands = BrandRepository::paginateAdmin($request->input('keyword') ?? $request->input('search'), $this->perPage($request));
         return view('admin.brand.index', ['brands' => $brands, 'items' => $brands]);
     }

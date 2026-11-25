@@ -6,13 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\SectionRequest;
 use App\Repositories\ContactSectionRepository;
 use Illuminate\Http\Request;
-use Illuminate\Pagination\Paginator;
 
 class ContactSectionController extends Controller
 {
     public function index(Request $request)
     {
-        Paginator::useBootstrap();
         $sections = ContactSectionRepository::paginateAdmin($request->input('keyword') ?? $request->input('search'), $this->perPage($request));
         return view('admin.contact-section.index', ['sections' => $sections, 'items' => $sections]);
     }

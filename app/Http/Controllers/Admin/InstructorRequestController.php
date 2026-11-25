@@ -9,7 +9,6 @@ use App\Http\Requests\Admin\InstructorRequestUpdateRequest;
 use App\Models\User;
 use App\Repositories\InstructorRequestRepository;
 use Illuminate\Http\Request;
-use Illuminate\Pagination\Paginator;
 
 /**
  * Instructor requests. Updating a request to `approved` also makes
@@ -21,7 +20,6 @@ class InstructorRequestController extends Controller
 {
     public function index(Request $request)
     {
-        Paginator::useBootstrap();
         $query = \App\Models\InstructorRequest::query()->with(['user']);
         $query->when($request->filled('keyword'), function ($q) use ($request) {
             $q->whereHas('user', function ($q) use ($request) {

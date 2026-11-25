@@ -9,7 +9,6 @@ use App\Models\CourseCategory;
 use App\Models\User;
 use App\Repositories\CourseRepository;
 use Illuminate\Http\Request;
-use Illuminate\Pagination\Paginator;
 
 /**
  * Admin course CRUD (the simple single-page forms in the rebuilt
@@ -45,7 +44,6 @@ class CourseController extends Controller
 
     public function index(Request $request)
     {
-        Paginator::useBootstrap();
         $courses = CourseRepository::paginateAdmin($request->input('keyword'), $this->perPage($request));
 
         return view('admin.course.index', ['courses' => $courses, 'items' => $courses]);

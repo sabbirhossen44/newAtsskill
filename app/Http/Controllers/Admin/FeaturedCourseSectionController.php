@@ -6,13 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\FeaturedCourseSectionRequest;
 use App\Repositories\FeaturedCourseSectionRepository;
 use Illuminate\Http\Request;
-use Illuminate\Pagination\Paginator;
 
 class FeaturedCourseSectionController extends Controller
 {
     public function index(Request $request)
     {
-        Paginator::useBootstrap();
         $sections = FeaturedCourseSectionRepository::paginateAdmin($request->input('keyword') ?? $request->input('search'), $this->perPage($request));
         return view('admin.featured-course-section.index', ['sections' => $sections, 'items' => $sections]);
     }
