@@ -14,8 +14,9 @@ class CourseCategoryUpdateRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:255'],
             'icon' => ['nullable', 'image', 'max:255'],
-            'status' => ['nullable', 'boolean'],
-            'code' => ['required', 'exists:languages,code'],
+            'status' => ['nullable'],
+            'code' => ['nullable', 'exists:languages,code'],
+            'parent_id' => ['nullable', 'exists:course_categories,id'],
         ];
     }
 }

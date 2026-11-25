@@ -13,7 +13,7 @@ class CountryStoreRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255', 'unique:countries,name,'.$this->country],
-            'status' => ['required', 'boolean'],
+            'status' => ['required'],
         ];
     }
 

@@ -14,9 +14,11 @@ class CourseCategoryStoreRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:255'],
             'slug' => ['required', 'unique:course_categories,slug'],
+            'parent_id' => ['nullable', 'exists:course_categories,id'],
+            'parent_id' => ['nullable', 'exists:course_categories,id'],
             'icon' => ['required', 'image', 'max:255'],
-            'status' => ['required', 'boolean'],
-            'show_at_trending' => ['required', 'boolean'],
+            'status' => ['required'],
+            'show_at_trending' => ['nullable', 'boolean'],
         ];
     }
 

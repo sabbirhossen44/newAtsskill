@@ -44,13 +44,22 @@ class RolesController extends Controller
         return $this->redirectWithMessage(RedirectTypeEnum::CREATE->value, 'admin.role.index');
     }
 
+    public function show(Role $role)
+    {
+        // No dedicated show view exists (old code had none either);
+        // the show route redirects to the edit screen.
+        $this->checkAdminPermission('role.view');
+
+        return redirect()->route('admin.role.edit', $role->id);
+    }
+
     public function edit(Role $role)
     {
         $this->checkAdminPermission('role.edit');
         $permissions = RoleRepository::allPermissions();
         $permission_groups = RoleRepository::permissionGroups();
 
-        return view('admin.roles.edit', compact('permissions', 'permission_groups', 'role'));
+        return view('admin.roles.edit', compact('permissions', 'permission_groups', 'role') + ['item' => $role]);
     }
 
     public function update(RoleFormRequest $request, Role $role)

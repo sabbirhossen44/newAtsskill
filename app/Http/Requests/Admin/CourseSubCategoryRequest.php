@@ -16,12 +16,12 @@ class CourseSubCategoryRequest extends FormRequest
         ];
         if($this->isMethod('post')) {
             $rules += [
-                'slug' => ['required', 'string', 'max:255', 'unique:course_categories,slug'],
-                'status' => ['required', 'boolean'],
+                'slug' => ['nullable', 'string', 'max:255', 'unique:course_categories,slug'],
+                'status' => ['required'],
             ];
         }
         if($this->isMethod('put')) {
-            $rules['code'] = 'required|exists:languages,code';
+            $rules['code'] = 'nullable|exists:languages,code';
         }
         return $rules;
     }

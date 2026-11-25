@@ -13,10 +13,10 @@ class CourseLevelRequest extends FormRequest
     {
         $rules = [
             'name' => ['required', 'max:255'],
-            'status' => ['required', 'boolean'],
+            'status' => ['required'],
         ];
         if($this->method() == 'POST'){
-            $rules['slug'] = ['required', 'max:255', 'unique:course_levels,slug'];
+            $rules['slug'] = ['nullable', 'max:255', 'unique:course_levels,slug'];
         }
         return $rules;
     }

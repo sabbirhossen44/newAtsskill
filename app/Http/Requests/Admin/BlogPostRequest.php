@@ -26,7 +26,7 @@ class BlogPostRequest extends FormRequest
         ];
 
         if ($this->isMethod('put')) {
-            $rules['code'] = 'required|exists:languages,code';
+            $rules['code'] = 'nullable|exists:languages,code';
             $rules['title'] = 'required|string|max:255';
             $rules['slug'] = 'sometimes|string|max:255|unique:blogs,slug,'.$this->blog;
             $rules['image'] = 'nullable';

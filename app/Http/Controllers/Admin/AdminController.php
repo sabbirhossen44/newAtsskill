@@ -50,7 +50,7 @@ class AdminController extends Controller
         $admin = AdminRepository::findByIdOrFail($id);
         $roles = RoleRepository::allRoles();
 
-        return view('admin.admin-list.edit', compact('roles', 'admin'));
+        return view('admin.admin-list.edit', compact('roles', 'admin') + ['item' => $admin]);
     }
 
     public function update(AdminRequest $request, $id)

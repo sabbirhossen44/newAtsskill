@@ -32,11 +32,17 @@ class TeamMemberController extends Controller
         return redirect()->route('admin.team-members.index')->with($notification);
     }
 
+    public function show($id)
+    {
+        // No dedicated show view exists (old code had none either).
+        return redirect()->route('admin.team-members.edit', $id);
+    }
+
     public function edit($id)
     {
         $teamMember = TeamMemberRepository::findByIdOrFail($id);
 
-        return view('admin.team-members.edit', compact('teamMember'));
+        return view('admin.team-members.edit', compact('teamMember') + ['item' => $teamMember]);
     }
 
     public function update(TeamMemberRequest $request, $id)

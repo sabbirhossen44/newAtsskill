@@ -100,3 +100,24 @@ if (! function_exists('setFormTabStep')) {
         session()->flash($name, $step);
     }
 }
+
+/**
+ * Render a model attribute that may be a backed enum, a boolean or a
+ * plain string/int. `{{ $item->status }}` throws for enum-cast
+ * attributes, and `$item->status?->value` warns on scalars, so views
+ * use enum_value($item->status) instead.
+ */
+if (! function_exists('enum_value')) {
+    function enum_value(mixed $value): mixed
+    {
+        if ($value instanceof \BackedEnum) {
+            return $value->value;
+        }
+
+        if ($value instanceof \UnitEnum) {
+            return $value->name;
+        }
+
+        return $value;
+    }
+}

@@ -30,6 +30,12 @@ class InstructorController extends Controller
         return redirect()->route('admin.instructors.index')->with($notification);
     }
 
+    public function show($id)
+    {
+        // No dedicated show view exists (old code had none either).
+        return redirect()->route('admin.instructors.edit', $id);
+    }
+
     public function edit($id)
     {
         // ভেরিয়েবল $instructors ব্যবহার করা হলো যাতে এডিট ব্লেড ফাইলে সব ভেরিয়েবল ঠিক থাকে
