@@ -10,16 +10,12 @@ use Illuminate\Support\Facades\Session;
 if (! function_exists('setting')) {
     function setting(string $key, mixed $default = null): mixed
     {
-        try {
-            $settings = Cache::rememberForever('site_settings', function () {
-                return Setting::all()->pluck('value', 'key')->map(fn ($value) => is_string($value) ? $value : (string) $value);
-            });
-        } catch (\Throwable) {
-            // Fresh install / commands before migrate: no settings table yet.
-            return $default;
-        }
-
-        return $settings->get($key, $default);
+        // Single source of truth: SettingService::all() caches the settings
+        // as a plain array under 'site_settings'. Do NOT cache a Collection
+        // under the same key here — whichever writer runs first wins, and
+        // calling ->get() on a cached array fatals with
+        // "Call to a member function get() on array" (seen on /login).
+        return SettingService::get($key, $default);
     }
 }
 
