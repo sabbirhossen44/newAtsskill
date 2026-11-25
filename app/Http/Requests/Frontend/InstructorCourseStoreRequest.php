@@ -4,6 +4,7 @@ namespace App\Http\Requests\Frontend;
 
 use App\Rules\ValidateDiscountRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class InstructorCourseStoreRequest extends FormRequest
 {
@@ -25,7 +26,7 @@ class InstructorCourseStoreRequest extends FormRequest
         ];
 
         if ($this->edit_mode == 0) {
-            $rules['slug'] = ['required', 'string', 'max:255', 'unique:courses,slug'];
+            $rules['slug'] = ['required', 'string', 'max:255', Rule::unique('courses', 'slug')->whereNull('deleted_at')];
         }
 
         return $rules;

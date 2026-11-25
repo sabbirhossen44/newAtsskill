@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Str;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 
 class Blog extends Model
 {
@@ -100,6 +101,15 @@ class Blog extends Model
         }
 
         return $slug;
+    }
+
+    public function thumbnail(): Attribute
+    {
+        return Attribute::make(
+            get: fn () => $this->primaryMedia?->media
+                ? Media::resolveUrl($this->primaryMedia->media->src)
+                : (Media::resolveUrl($this->image) ?? asset('images/default.webp')),
+        );
     }
 
 }

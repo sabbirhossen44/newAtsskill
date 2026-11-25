@@ -9,14 +9,14 @@ use Illuminate\Http\Request;
 
 class InstructorLessonQnaController extends Controller
 {
-    function index(Request $request)
+    public function index(Request $request)
     {
         $lesson_questions = LessonQnaRepository::paginateQuestions($request->only(['seen', 'sort_by']));
 
         return view('frontend.instructor-dashboard.lesson-qna.index', compact('lesson_questions'));
     }
 
-    function destroyQuestion($id)
+    public function destroyQuestion($id)
     {
         if (LessonQnaRepository::destroyQuestion($id)) {
             $notification = ['messege' => __('Question deleted successfully'), 'alert-type' => 'success'];
@@ -29,7 +29,7 @@ class InstructorLessonQnaController extends Controller
         return back()->with($notification);
     }
 
-    function createReply(LessonReplyRequest $request, $id)
+    public function createReply(LessonReplyRequest $request, $id)
     {
         LessonQnaRepository::createReply($id, auth('web')->user()->id, $request->reply);
 
@@ -38,7 +38,7 @@ class InstructorLessonQnaController extends Controller
         return back()->with($notification);
     }
 
-    function destroyReply($id)
+    public function destroyReply($id)
     {
         if (LessonQnaRepository::destroyReply($id)) {
             $notification = ['messege' => __('Reply deleted successfully'), 'alert-type' => 'success'];

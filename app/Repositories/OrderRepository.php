@@ -2,6 +2,8 @@
 
 namespace App\Repositories;
 
+use Arafat\LaravelRepository\Repository;
+
 use App\Services\TranslationService;
 
 use Illuminate\Support\Facades\Schema;
@@ -12,7 +14,7 @@ use App\Models\Course;
 use App\Models\Enrollment;
 use App\Models\Order;
 use App\Models\OrderItem;
-class OrderRepository
+class OrderRepository extends Repository
 {
     public static function model()
     {
@@ -21,7 +23,7 @@ class OrderRepository
 
     public static function findById(int $id): ?Order
     {
-        return static::model()::query()->find($id);
+        return self::find($id);
     }
 
     public static function storeByRequest(array $data): Order
@@ -29,7 +31,7 @@ class OrderRepository
         $items = $data['items'] ?? [];
         unset($data['items']);
 
-        $order = static::model()::query()->create($data);
+        $order = self::create($data);
 
         foreach ($items as $item) {
             $order->orderItems()->create($item);
@@ -81,7 +83,7 @@ class OrderRepository
      */
     public static function createFromCart(array $attributes, array $items, int $buyerId, bool $creditInstructorWallet = false): Order
     {
-        $order = static::model()::query()->create($attributes);
+        $order = self::create($attributes);
 
         foreach ($items as $item) {
             OrderItem::create([
@@ -151,12 +153,16 @@ class OrderRepository
 
     public static function findByIdOrFail(int $id): mixed
     {
-        return static::model()::query()->findOrFail($id);
+        return self::findOrFail($id);
     }
 
     public static function delete(mixed $record): bool
     {
-        return (bool) $record->delete();
+        if ($record instanceof \Illuminate\Database\Eloquent\Model) {
+            return (bool) $record->delete();
+        }
+
+        return (bool) static::query()->destroy($record);
     }
 
     public static function toggleStatus(mixed $record): bool
@@ -258,7 +264,7 @@ class OrderRepository
     public static function paginatePendingOrders(int $perPage = 15): LengthAwarePaginator
     {
         return static::model()::query()->with(['user'])
-            ->where('payment_status', \App\Enums\PaymentStatusEnum::PENDING->value)
+            ->where('payment_status', 'pending')
             ->latest()->paginate($perPage);
     }
 

@@ -18,15 +18,18 @@ use App\Models\CourseMedia;
 use App\Models\CoursePartnerInstructor;
 use App\Models\CourseSelectedLanguage;
 use App\Models\CourseSelectedLevel;
+use App\Models\Media;
 use App\Models\Quiz;
 use App\Models\User;
+use Arafat\LaravelRepository\Repository;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 
-class CourseRepository
+class CourseRepository extends Repository
 {
     public static function model()
     {
@@ -70,7 +73,7 @@ class CourseRepository
      * Query chain moved verbatim from the old controller, including
      * the ungrouped orWhere() in the free-price branch.
      */
-    public static function paginateFiltered(Request $request): LengthAwarePaginator
+    public static function paginateFiltered(Request $request, int $perPage = 12): LengthAwarePaginator
     {
         $query = static::model()::query();
         $query->where(['is_approved' => CourseApprovalEnum::APPROVED->value, 'status' => CourseStatusEnum::ACTIVE->value]);
@@ -120,7 +123,7 @@ class CourseRepository
         $query->with(['instructor:id,name', 'enrollments', 'category.translation']);
         $query->orderBy('created_at', $request->order && $request->filled('order') ? $request->order : 'desc');
 
-        return $query->paginate(12);
+        return $query->paginate($perPage)->withQueryString();
     }
 
     /**
@@ -354,7 +357,7 @@ class CourseRepository
         $relations = $data;
         unset($data['level_ids'], $data['language_ids'], $data['medias']);
 
-        $course = static::model()::query()->create($data);
+        $course = self::create($data);
 
         $data = $relations;
 
@@ -372,7 +375,7 @@ class CourseRepository
         $relations = $data;
         unset($data['level_ids'], $data['language_ids'], $data['medias']);
 
-        $updated = $course->update($data);
+        $updated = self::update($course, $data);
 
         static::syncRelations($course, $relations);
 
@@ -396,8 +399,90 @@ class CourseRepository
         }
 
         if (! empty($data['medias'])) {
-            MediaRepository::syncForParent($course, $data['medias'], CourseMedia::class, 'course_id');
+            static::syncForParent($course, $data['medias'], CourseMedia::class, 'course_id');
         }
+    }
+
+    /**
+     * Sync a course's media pivots. Moved here from MediaRepository:
+     * Sabbir's pasted verbatim MediaRepository does not ship
+     * syncForParent(), so the pivot logic lives with its only caller.
+     *
+     * $medias is a list of new uploads and/or kept media, each item one of:
+     * an UploadedFile, a Media model, a media id, or an array with a
+     * 'file' (UploadedFile) and/or 'media_id'/'id' plus optional
+     * 'is_primary' / 'order'. It may also be shaped as
+     * ['files' => [...], 'existing_media_ids' => [...]]. New files are
+     * stored via MediaRepository::storeByRequest($file, 'courses', 'image').
+     * Pivot rows are created with is_primary/order (the first kept item
+     * is primary when none is flagged), and pivots whose media_id is not
+     * in $existingMediaIds (plus the ids stored/kept in this call) are
+     * deleted. The Media records themselves are never deleted here.
+     */
+    public static function syncForParent(Course $course, array $medias, string $pivotClass = CourseMedia::class, string $foreignKey = 'course_id', array $existingMediaIds = []): void
+    {
+        $items = $medias['files'] ?? $medias['items'] ?? $medias;
+        $existingMediaIds = array_merge(
+            $existingMediaIds,
+            array_map('intval', (array) ($medias['existing_media_ids'] ?? $medias['existing_ids'] ?? []))
+        );
+
+        $entries = [];
+        $order = 0;
+
+        foreach ((array) $items as $item) {
+            if ($item instanceof UploadedFile) {
+                $file = $item;
+                $isPrimary = null;
+            } elseif ($item instanceof Media) {
+                $entries[] = ['media_id' => $item->id, 'is_primary' => null, 'order' => $order++];
+                continue;
+            } elseif (is_numeric($item)) {
+                $entries[] = ['media_id' => (int) $item, 'is_primary' => null, 'order' => $order++];
+                continue;
+            } elseif (is_array($item) && isset($item['file']) && $item['file'] instanceof UploadedFile) {
+                $file = $item['file'];
+                $isPrimary = $item['is_primary'] ?? null;
+            } elseif (is_array($item) && isset($item['media_id'])) {
+                $entries[] = ['media_id' => (int) $item['media_id'], 'is_primary' => $item['is_primary'] ?? null, 'order' => $item['order'] ?? $order++];
+                continue;
+            } elseif (is_array($item) && isset($item['id'])) {
+                $entries[] = ['media_id' => (int) $item['id'], 'is_primary' => $item['is_primary'] ?? null, 'order' => $item['order'] ?? $order++];
+                continue;
+            } else {
+                continue;
+            }
+
+            $media = MediaRepository::storeByRequest($file, 'courses', 'image');
+            $entries[] = ['media_id' => $media->id, 'is_primary' => $isPrimary, 'order' => is_array($item) ? ($item['order'] ?? $order++) : $order++];
+        }
+
+        $hasPrimary = collect($entries)->contains(fn ($entry) => ! empty($entry['is_primary']));
+
+        foreach ($entries as $index => $entry) {
+            $pivotClass::query()->updateOrCreate(
+                [$foreignKey => $course->id, 'media_id' => $entry['media_id']],
+                ['is_primary' => $hasPrimary ? (bool) $entry['is_primary'] : $index === 0, 'order' => $entry['order']]
+            );
+        }
+
+        // Kept pivots not re-stated in this call lose primary status, so
+        // exactly one pivot is primary (the flagged entry, else the first).
+        if ($entries !== []) {
+            $pivotClass::query()->where($foreignKey, $course->id)
+                ->whereNotIn('media_id', collect($entries)->pluck('media_id')->all())
+                ->update(['is_primary' => false]);
+        }
+
+        $keptMediaIds = array_unique(array_merge(
+            $existingMediaIds,
+            collect($entries)->pluck('media_id')->all()
+        ));
+
+        $pivotClass::query()
+            ->where($foreignKey, $course->id)
+            ->whereNotIn('media_id', $keptMediaIds)
+            ->delete();
     }
 
     public static function paginateAdmin(?string $search = null, int $perPage = 15): LengthAwarePaginator
@@ -416,11 +501,6 @@ class CourseRepository
         }
 
         return $query->paginate($perPage);
-    }
-
-    public static function delete(mixed $record): bool
-    {
-        return (bool) $record->delete();
     }
 
     public static function toggleStatus(mixed $record): bool
@@ -525,7 +605,7 @@ class CourseRepository
             'description' => $data['description'] ?? null,
             'thumbnail' => $data['thumbnail'] ?? null,
             'type' => $data['type'] ?? null,
-            'status' => \App\Enums\CourseStatusEnum::tryFrom((string) ($data['status'] ?? '')) ?? \App\Enums\CourseStatusEnum::INACTIVE,
+            'status' => (\App\Enums\CourseStatusEnum::tryFrom((string) ($data['status'] ?? '')) ?? \App\Enums\CourseStatusEnum::INACTIVE)->value,
             'certificate' => $bool('certificate'),
             'downloadable' => $bool('downloadable'),
             'qna' => $bool('qna'),
@@ -537,7 +617,7 @@ class CourseRepository
     public static function storeAdmin(array $data): Course
     {
         $attrs = static::adminAttributes($data);
-        $attrs['is_approved'] = \App\Enums\CourseApprovalEnum::PENDING;
+        $attrs['is_approved'] = \App\Enums\CourseApprovalEnum::PENDING->value;
 
         return static::model()::query()->create($attrs);
     }

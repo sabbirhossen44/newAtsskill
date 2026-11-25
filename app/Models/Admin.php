@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Enums\UserStatusEnum;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -11,20 +10,19 @@ use Illuminate\Support\Facades\DB;
 use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
 
-use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 
-#[Fillable(['name', 'email', 'password', 'image', 'bio', 'status', 'forget_password_token'])]
 #[Hidden(['password', 'remember_token'])]
 class Admin extends Authenticatable
 {
     use HasFactory, HasApiTokens, HasRoles, Notifiable;
 
+    protected $guarded = ['id'];
+
     protected function casts(): array
     {
         return [
             'password' => 'hashed',
-            'status' => \App\Enums\UserStatusEnum::class,
         ];
     }
 

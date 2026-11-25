@@ -2,12 +2,14 @@
 
 namespace App\Repositories;
 
+use Arafat\LaravelRepository\Repository;
+
 use App\Models\Country;
 use App\Services\TranslationService;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Schema;
 
-class CountryRepository
+class CountryRepository extends Repository
 {
     public static function model()
     {
@@ -41,11 +43,6 @@ class CountryRepository
     public static function findByIdOrFail(int $id): mixed
     {
         return static::model()::query()->findOrFail($id);
-    }
-
-    public static function delete(mixed $record): bool
-    {
-        return (bool) $record->delete();
     }
 
     public static function toggleStatus(mixed $record): bool

@@ -2,12 +2,14 @@
 
 namespace App\Repositories;
 
+use Arafat\LaravelRepository\Repository;
+
 use App\Models\LessonQuestion;
 use App\Services\TinymceImageService;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 
-class LessonQuestionRepository
+class LessonQuestionRepository extends Repository
 {
     public static function model()
     {
@@ -16,7 +18,7 @@ class LessonQuestionRepository
 
     public static function storeByRequest(array $data): LessonQuestion
     {
-        return static::model()::query()->create([
+        return self::create([
             'user_id' => $data['user_id'],
             'lesson_id' => $data['lesson_id'],
             'course_id' => $data['course_id'],

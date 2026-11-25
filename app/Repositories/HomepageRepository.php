@@ -119,7 +119,7 @@ class HomepageRepository
      * be paginated by the query builder). The `is_banned => 0` value is
      * preserved verbatim from the old controller.
      */
-    public static function paginateAllInstructors(string $url, int $currentPage = 1): LengthAwarePaginator
+    public static function paginateAllInstructors(string $url, int $currentPage = 1, int $perPage = 12, array $query = []): LengthAwarePaginator
     {
         $users = User::where(['status' => UserStatusEnum::ACTIVE->value, 'is_banned' => 0, 'role' => UserRoleEnum::INSTRUCTOR->value])->get();
 
@@ -131,7 +131,6 @@ class HomepageRepository
 
         $allData = $users->concat($newInstructors);
 
-        $perPage = 12;
         $items = $allData->forPage($currentPage, $perPage);
 
         return new LengthAwarePaginator(
@@ -139,7 +138,7 @@ class HomepageRepository
             $allData->count(),
             $perPage,
             $currentPage,
-            ['path' => $url]
+            ['path' => $url, 'query' => $query]
         );
     }
 

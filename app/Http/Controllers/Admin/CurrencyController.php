@@ -2,9 +2,6 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Enums\RedirectTypeEnum;
-use App\Http\Controllers\Concerns\ChecksAdminPermissions;
-use App\Http\Controllers\Concerns\RedirectsWithMessage;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\CurrencyRequest;
 use App\Repositories\CurrencyRepository;
@@ -13,12 +10,8 @@ use Illuminate\Pagination\Paginator;
 
 class CurrencyController extends Controller
 {
-    use ChecksAdminPermissions;
-    use RedirectsWithMessage;
-
     public function index(Request $request)
     {
-        $this->checkAdminPermission('currency.view');
         Paginator::useBootstrap();
         $currencies = CurrencyRepository::paginateAdmin($request->input('keyword') ?? $request->input('search'), $this->perPage($request));
         return view('admin.currency.index', ['currencies' => $currencies, 'items' => $currencies]);
@@ -26,13 +19,11 @@ class CurrencyController extends Controller
 
     public function create()
     {
-        $this->checkAdminPermission('currency.view');
         return view('admin.currency.create', []);
     }
 
     public function store(CurrencyRequest $request)
     {
-        $this->checkAdminPermission('currency.view');
         $data = $request->validated();
         $data['currency_name'] = $data['name'] ?? $data['currency_name'] ?? null;
                 $data['currency_code'] = $data['code'] ?? $data['currency_code'] ?? null;
@@ -46,19 +37,17 @@ class CurrencyController extends Controller
 
         CurrencyRepository::storeByRequest($data);
 
-        return $this->redirectWithMessage(RedirectTypeEnum::CREATE->value, 'admin.currency.index');
+        return redirect()->route('admin.currency.index')->with('success', 'Currency created successfully.');
     }
 
     public function edit($id)
     {
-        $this->checkAdminPermission('currency.view');
         $item = CurrencyRepository::findByIdOrFail($id);
         return view('admin.currency.edit', ['item' => $item, 'currency' => $item]);
     }
 
     public function update(CurrencyRequest $request, $id)
     {
-        $this->checkAdminPermission('currency.view');
         $item = CurrencyRepository::findByIdOrFail($id);
         $data = $request->validated();
         $data['currency_name'] = $data['name'] ?? $data['currency_name'] ?? null;
@@ -73,16 +62,22 @@ class CurrencyController extends Controller
 
         CurrencyRepository::updateByRequest($item, $data);
 
-        return $this->redirectWithMessage(RedirectTypeEnum::UPDATE->value, 'admin.currency.index');
+        return redirect()->route('admin.currency.index')->with('success', 'Currency updated successfully.');
     }
 
     public function destroy($id)
     {
-        $this->checkAdminPermission('currency.view');
         $item = CurrencyRepository::findByIdOrFail($id);
 
-        CurrencyRepository::delete($item);
+        $item->delete();
 
-        return $this->redirectWithMessage(RedirectTypeEnum::DELETE->value, 'admin.currency.index');
+        return redirect()->route('admin.currency.index')->with('success', 'Currency deleted successfully.');
+    }
+
+    private function perPage(Request $request): int
+    {
+        $perPage = (int) $request->input('per_page', 15);
+
+        return in_array($perPage, [10, 25, 50, 100], true) ? $perPage : 15;
     }
 }

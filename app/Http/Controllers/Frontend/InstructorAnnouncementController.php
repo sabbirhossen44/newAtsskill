@@ -2,9 +2,7 @@
 
 namespace App\Http\Controllers\Frontend;
 
-use App\Enums\RedirectTypeEnum;
 use App\Http\Controllers\Controller;
-use App\Http\Controllers\Concerns\RedirectsWithMessage;
 use App\Http\Requests\Frontend\AnnouncementRequest;
 use App\Repositories\AnnouncementRepository;
 
@@ -13,9 +11,7 @@ class InstructorAnnouncementController extends Controller
     /**
      * Display a listing of the resource.
      */
-    use RedirectsWithMessage;
-
-    function index()
+    public function index()
     {
         $announcements = AnnouncementRepository::allForInstructor(auth('web')->user()->id);
 
@@ -35,16 +31,19 @@ class InstructorAnnouncementController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    function store(AnnouncementRequest $request)
+    public function store(AnnouncementRequest $request)
     {
+        $data = $request->validated();
+
         AnnouncementRepository::storeByRequest([
             'instructor_id' => auth('web')->user()->id,
-            'course_id' => $request->course,
-            'title' => $request->title,
-            'announcement' => $request->announcement,
+            'course_id' => $data['course'],
+            'title' => $data['title'],
+            'announcement' => $data['announcement'],
         ]);
 
-        return $this->redirectWithMessage(RedirectTypeEnum::CREATE->value, 'instructor.announcements.index');
+        return redirect()->route('instructor.announcements.index')
+            ->with(['messege' => __('Created successfully'), 'alert-type' => 'success']);
     }
 
     /**
@@ -64,13 +63,16 @@ class InstructorAnnouncementController extends Controller
     public function update(AnnouncementRequest $request, string $id)
     {
         $announcement = AnnouncementRepository::findByIdOrFail($id);
+        $data = $request->validated();
+
         AnnouncementRepository::updateByRequest($announcement, [
-            'course_id' => $request->course,
-            'title' => $request->title,
-            'announcement' => $request->announcement,
+            'course_id' => $data['course'],
+            'title' => $data['title'],
+            'announcement' => $data['announcement'],
         ]);
 
-        return $this->redirectWithMessage(RedirectTypeEnum::UPDATE->value, 'instructor.announcements.index');
+        return redirect()->route('instructor.announcements.index')
+            ->with(['messege' => __('Updated successfully'), 'alert-type' => 'success']);
     }
 
     /**

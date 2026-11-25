@@ -5,9 +5,6 @@ namespace App\Http\Controllers\Admin;
 use App\Enums\InstructorRequestStatusEnum;
 use App\Enums\UserRoleEnum;
 use App\Http\Controllers\Controller;
-use App\Http\Controllers\Concerns\ChecksAdminPermissions;
-use App\Http\Controllers\Concerns\RedirectsWithMessage;
-use App\Enums\RedirectTypeEnum;
 use App\Http\Requests\Admin\InstructorRequestUpdateRequest;
 use App\Models\User;
 use App\Repositories\InstructorRequestRepository;
@@ -22,12 +19,8 @@ use Illuminate\Pagination\Paginator;
  */
 class InstructorRequestController extends Controller
 {
-    use ChecksAdminPermissions;
-    use RedirectsWithMessage;
-
     public function index(Request $request)
     {
-        $this->checkAdminPermission('instructor.request.list');
         Paginator::useBootstrap();
         $query = \App\Models\InstructorRequest::query()->with(['user']);
         $query->when($request->filled('keyword'), function ($q) use ($request) {
@@ -44,7 +37,6 @@ class InstructorRequestController extends Controller
 
     public function show($id)
     {
-        $this->checkAdminPermission('instructor.request.list');
         $item = \App\Models\InstructorRequest::with(['user'])->findOrFail($id);
 
         return view('admin.instructor-request.show', ['item' => $item, 'instructorRequest' => $item]);
@@ -52,7 +44,6 @@ class InstructorRequestController extends Controller
 
     public function edit($id)
     {
-        $this->checkAdminPermission('instructor.request.list');
         $item = \App\Models\InstructorRequest::findOrFail($id);
         $user = User::find($item->user_id);
 
@@ -61,7 +52,6 @@ class InstructorRequestController extends Controller
 
     public function update(InstructorRequestUpdateRequest $request, $id)
     {
-        $this->checkAdminPermission('instructor.request.list');
         $instructorRequest = \App\Models\InstructorRequest::findOrFail($id);
         $status = InstructorRequestStatusEnum::tryFrom($request->input('status')) ?? $instructorRequest->status;
         $instructorRequest->update(['status' => $status]);
@@ -70,14 +60,20 @@ class InstructorRequestController extends Controller
             User::where('id', $instructorRequest->user_id)->update(['role' => UserRoleEnum::INSTRUCTOR->value]);
         }
 
-        return $this->redirectWithMessage(RedirectTypeEnum::UPDATE->value, 'admin.instructor-request.index');
+        return redirect()->route('admin.instructor-request.index')->with('success', 'Instructor request updated successfully.');
     }
 
     public function destroy($id)
     {
-        $this->checkAdminPermission('instructor.request.list');
         \App\Models\InstructorRequest::findOrFail($id)->delete();
 
-        return $this->redirectWithMessage(RedirectTypeEnum::DELETE->value, 'admin.instructor-request.index');
+        return redirect()->route('admin.instructor-request.index')->with('success', 'Instructor request deleted successfully.');
+    }
+
+    private function perPage(Request $request): int
+    {
+        $perPage = (int) $request->input('per_page', 15);
+
+        return in_array($perPage, [10, 25, 50, 100], true) ? $perPage : 15;
     }
 }

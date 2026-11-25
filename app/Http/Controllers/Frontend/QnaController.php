@@ -11,7 +11,7 @@ use App\Http\Controllers\Controller;
 
 class QnaController extends Controller
 {
-    function create(QnaQuestionRequest $request)
+    public function create(QnaQuestionRequest $request)
     {
         $question = LessonQuestionRepository::storeByRequest([
             'user_id' => auth('web')->user()->id,
@@ -28,7 +28,7 @@ class QnaController extends Controller
         ], 200);
     }
 
-    function fetchLessonQuestions(Request $request)
+    public function fetchLessonQuestions(Request $request)
     {
         $questions = LessonQuestionRepository::paginateForLesson($request);
 
@@ -40,7 +40,7 @@ class QnaController extends Controller
         ]);
     }
 
-    function createReply(QnaReplyRequest $request)
+    public function createReply(QnaReplyRequest $request)
     {
         $reply = LessonReplyRepository::storeByRequest([
             'user_id' => auth('web')->user()->id,
@@ -55,7 +55,7 @@ class QnaController extends Controller
         ], 200);
     }
 
-    function fetchReply(Request $request)
+    public function fetchReply(Request $request)
     {
         $question = LessonQuestionRepository::findWithUser((int) $request->question_id);
         $replies = LessonReplyRepository::forQuestion((int) $request->question_id);
@@ -63,7 +63,7 @@ class QnaController extends Controller
         return view('frontend.pages.learning-player.partials.reply-card', compact('replies', 'question'))->render();
     }
 
-    function destroyReply(string $id)
+    public function destroyReply(string $id)
     {
         if (LessonReplyRepository::deleteOwnedByUser($id, auth('web')->user()->id)) {
             return response()->json([
@@ -78,7 +78,7 @@ class QnaController extends Controller
         ]);
     }
 
-    function destroyQuestion(string $id)
+    public function destroyQuestion(string $id)
     {
         if (LessonQuestionRepository::deleteOwnedByUser($id, auth('web')->user()->id)) {
             return response()->json([

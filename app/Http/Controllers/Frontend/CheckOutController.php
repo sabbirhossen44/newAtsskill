@@ -14,7 +14,7 @@ class CheckOutController extends Controller
         $this->checkout = $checkout;
     }
 
-    function index()
+    public function index()
     {
         if ($this->checkout->hasAlreadyEnrolledProduct()) {
             return redirect()->route('cart')->with(['messege' => __('Error occurred please try agin'), 'alert-type' => 'error']);

@@ -2,10 +2,12 @@
 
 namespace App\Repositories;
 
+use Arafat\LaravelRepository\Repository;
+
 use App\Models\QuizResult;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
-class QuizResultRepository
+class QuizResultRepository extends Repository
 {
     public static function model()
     {
@@ -33,11 +35,11 @@ class QuizResultRepository
 
     public static function storeByRequest(array $data): QuizResult
     {
-        return static::model()::query()->create($data);
+        return self::create($data);
     }
 
     public static function findByIdOrFail(int $id): QuizResult
     {
-        return static::model()::query()->findOrFail($id);
+        return self::findOrFail($id);
     }
 }

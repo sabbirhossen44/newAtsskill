@@ -2,9 +2,6 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Enums\RedirectTypeEnum;
-use App\Http\Controllers\Concerns\ChecksAdminPermissions;
-use App\Http\Controllers\Concerns\RedirectsWithMessage;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\TestimonialRequest;
 use App\Repositories\TestimonialRepository;
@@ -14,12 +11,8 @@ use Illuminate\Pagination\Paginator;
 
 class TestimonialController extends Controller
 {
-    use ChecksAdminPermissions;
-    use RedirectsWithMessage;
-
     public function index(Request $request)
     {
-        $this->checkAdminPermission('testimonial.view');
         Paginator::useBootstrap();
         $testimonials = TestimonialRepository::paginateAdmin($request->input('keyword') ?? $request->input('search'), $this->perPage($request));
         return view('admin.testimonial.index', ['testimonials' => $testimonials, 'items' => $testimonials]);
@@ -27,13 +20,11 @@ class TestimonialController extends Controller
 
     public function create()
     {
-        $this->checkAdminPermission('testimonial.view');
         return view('admin.testimonial.create', []);
     }
 
     public function store(TestimonialRequest $request)
     {
-        $this->checkAdminPermission('testimonial.view');
         $data = $request->validated();
         if ($request->hasFile('image')) {
             $data['image'] = UploadService::store($request->file('image'));
@@ -41,19 +32,17 @@ class TestimonialController extends Controller
 
         TestimonialRepository::storeByRequest($data);
 
-        return $this->redirectWithMessage(RedirectTypeEnum::CREATE->value, 'admin.testimonial.index');
+        return redirect()->route('admin.testimonial.index')->with('success', 'Testimonial created successfully.');
     }
 
     public function edit($id)
     {
-        $this->checkAdminPermission('testimonial.view');
         $item = TestimonialRepository::findByIdOrFail($id);
         return view('admin.testimonial.edit', ['item' => $item, 'testimonial' => $item]);
     }
 
     public function update(TestimonialRequest $request, $id)
     {
-        $this->checkAdminPermission('testimonial.view');
         $item = TestimonialRepository::findByIdOrFail($id);
         $data = $request->validated();
         if ($request->hasFile('image')) {
@@ -62,32 +51,41 @@ class TestimonialController extends Controller
 
         TestimonialRepository::updateByRequest($item, $data);
 
-        return $this->redirectWithMessage(RedirectTypeEnum::UPDATE->value, 'admin.testimonial.index');
+        return redirect()->route('admin.testimonial.index')->with('success', 'Testimonial updated successfully.');
     }
 
     public function destroy($id)
     {
-        $this->checkAdminPermission('testimonial.view');
         $item = TestimonialRepository::findByIdOrFail($id);
 
-        TestimonialRepository::delete($item);
+        $item->delete();
 
-        return $this->redirectWithMessage(RedirectTypeEnum::DELETE->value, 'admin.testimonial.index');
+        return redirect()->route('admin.testimonial.index')->with('success', 'Testimonial deleted successfully.');
     }
 
     public function statusUpdate(Request $request, $id)
     {
-        $this->checkAdminPermission('testimonial.view');
         $item = TestimonialRepository::findByIdOrFail($id);
 
         if ($request->filled('status')) {
             TestimonialRepository::updateStatus($item, $request->input('status'));
 
-            return redirect()->back()->with(['messege' => __('Updated Successfully'), 'alert-type' => 'success']);
+            return redirect()->back()->with('success', __('Updated Successfully'));
         }
 
         TestimonialRepository::toggleStatus($item);
 
-        return response()->json(['success' => true, 'message' => __('Updated Successfully')]);
+        if ($request->expectsJson()) {
+            return response()->json(['success' => true, 'message' => __('Updated Successfully')]);
+        }
+
+        return back()->with('success', __('Updated Successfully'));
+    }
+
+    private function perPage(Request $request): int
+    {
+        $perPage = (int) $request->input('per_page', 15);
+
+        return in_array($perPage, [10, 25, 50, 100], true) ? $perPage : 15;
     }
 }

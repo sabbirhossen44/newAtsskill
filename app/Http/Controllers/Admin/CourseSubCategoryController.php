@@ -3,9 +3,6 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Http\Controllers\Concerns\ChecksAdminPermissions;
-use App\Http\Controllers\Concerns\RedirectsWithMessage;
-use App\Enums\RedirectTypeEnum;
 use App\Http\Requests\Admin\CourseSubCategoryRequest;
 use App\Models\CourseCategory;
 use App\Repositories\CourseCategoryRepository;
@@ -19,12 +16,8 @@ use Illuminate\Pagination\Paginator;
  */
 class CourseSubCategoryController extends Controller
 {
-    use ChecksAdminPermissions;
-    use RedirectsWithMessage;
-
     public function index(Request $request, $parent_id)
     {
-        $this->checkAdminPermission('course.management');
         Paginator::useBootstrap();
         $parentId = (int) $parent_id;
         $subCategories = CourseCategoryRepository::paginateSubCategories($parentId, $this->perPage($request));
@@ -35,7 +28,6 @@ class CourseSubCategoryController extends Controller
 
     public function create($parent_id)
     {
-        $this->checkAdminPermission('course.management');
         $parentId = (int) $parent_id;
         $parentCategories = CourseCategory::whereNull('parent_id')->get();
 
@@ -44,19 +36,17 @@ class CourseSubCategoryController extends Controller
 
     public function store(CourseSubCategoryRequest $request, $parent_id)
     {
-        $this->checkAdminPermission('course.management');
         $data = $request->validated();
         if ($request->hasFile('icon')) {
             $data['icon'] = \App\Services\UploadService::store($request->file('icon'));
         }
         CourseCategoryRepository::storeSubCategory($data, (int) $parent_id);
 
-        return $this->redirectWithMessage(RedirectTypeEnum::CREATE->value, 'admin.course-sub-category.index', ['parent_id' => (int) $parent_id]);
+        return redirect()->route('admin.course-sub-category.index', ['parent_id' => (int) $parent_id])->with('success', 'Course sub-category created successfully.');
     }
 
     public function edit($parent_id, $sub_category_id)
     {
-        $this->checkAdminPermission('course.management');
         $item = CourseCategoryRepository::findByIdOrFail((int) $sub_category_id);
         $parentId = (int) $parent_id;
         $parentCategories = CourseCategory::whereNull('parent_id')->get();
@@ -66,7 +56,6 @@ class CourseSubCategoryController extends Controller
 
     public function update(CourseSubCategoryRequest $request, $parent_id, $sub_category_id)
     {
-        $this->checkAdminPermission('course.management');
         $item = CourseCategoryRepository::findByIdOrFail((int) $sub_category_id);
         $data = $request->validated();
         if ($request->hasFile('icon')) {
@@ -74,29 +63,38 @@ class CourseSubCategoryController extends Controller
         }
         CourseCategoryRepository::updateSubCategory($item, $data);
 
-        return $this->redirectWithMessage(RedirectTypeEnum::UPDATE->value, 'admin.course-sub-category.index', ['parent_id' => (int) $parent_id]);
+        return redirect()->route('admin.course-sub-category.index', ['parent_id' => (int) $parent_id])->with('success', 'Course sub-category updated successfully.');
     }
 
     public function destroy($parent_id, $sub_category_id)
     {
-        $this->checkAdminPermission('course.management');
         $item = CourseCategoryRepository::findByIdOrFail((int) $sub_category_id);
-        CourseCategoryRepository::delete($item);
+        $item->delete();
 
-        return $this->redirectWithMessage(RedirectTypeEnum::DELETE->value, 'admin.course-sub-category.index', ['parent_id' => (int) $parent_id]);
+        return redirect()->route('admin.course-sub-category.index', ['parent_id' => (int) $parent_id])->with('success', 'Course sub-category deleted successfully.');
     }
 
     public function statusUpdate(Request $request, $id)
     {
-        $this->checkAdminPermission('course.management');
         $item = CourseCategoryRepository::findByIdOrFail((int) $id);
         if ($request->filled('status')) {
             CourseCategoryRepository::updateStatus($item, $request->input('status'));
 
-            return redirect()->back()->with(['messege' => __('Updated Successfully'), 'alert-type' => 'success']);
+            return redirect()->back()->with('success', __('Updated Successfully'));
         }
         CourseCategoryRepository::toggleStatus($item);
 
-        return response()->json(['success' => true, 'message' => __('Updated Successfully')]);
+        if ($request->expectsJson()) {
+            return response()->json(['success' => true, 'message' => __('Updated Successfully')]);
+        }
+
+        return back()->with('success', __('Updated Successfully'));
+    }
+
+    private function perPage(Request $request): int
+    {
+        $perPage = (int) $request->input('per_page', 15);
+
+        return in_array($perPage, [10, 25, 50, 100], true) ? $perPage : 15;
     }
 }

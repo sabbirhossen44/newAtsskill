@@ -2,10 +2,12 @@
 
 namespace App\Repositories;
 
+use Arafat\LaravelRepository\Repository;
+
 use App\Models\Enrollment;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
-class EnrollmentRepository
+class EnrollmentRepository extends Repository
 {
     public static function model()
     {

@@ -2,9 +2,6 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Enums\RedirectTypeEnum;
-use App\Http\Controllers\Concerns\ChecksAdminPermissions;
-use App\Http\Controllers\Concerns\RedirectsWithMessage;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\SocialLinkRequest;
 use App\Repositories\SocialLinkRepository;
@@ -13,12 +10,8 @@ use Illuminate\Pagination\Paginator;
 
 class SocialLinkController extends Controller
 {
-    use ChecksAdminPermissions;
-    use RedirectsWithMessage;
-
     public function index(Request $request)
     {
-        $this->checkAdminPermission('social.link.management');
         Paginator::useBootstrap();
         $socialLinks = SocialLinkRepository::paginateAdmin($request->input('keyword') ?? $request->input('search'), $this->perPage($request));
         return view('admin.social-link.index', ['socialLinks' => $socialLinks, 'items' => $socialLinks]);
@@ -26,32 +19,28 @@ class SocialLinkController extends Controller
 
     public function create()
     {
-        $this->checkAdminPermission('social.link.management');
         return view('admin.social-link.create', []);
     }
 
     public function store(SocialLinkRequest $request)
     {
-        $this->checkAdminPermission('social.link.management');
         $data = $request->validated();
         $data['link'] = $data['url'] ?? $data['link'] ?? null;
                 unset($data['url'], $data['name']);
 
         SocialLinkRepository::storeByRequest($data);
 
-        return $this->redirectWithMessage(RedirectTypeEnum::CREATE->value, 'admin.social-link.index');
+        return redirect()->route('admin.social-link.index')->with('success', 'Social link created successfully.');
     }
 
     public function edit($id)
     {
-        $this->checkAdminPermission('social.link.management');
         $item = SocialLinkRepository::findByIdOrFail($id);
         return view('admin.social-link.edit', ['item' => $item, 'socialLink' => $item]);
     }
 
     public function update(SocialLinkRequest $request, $id)
     {
-        $this->checkAdminPermission('social.link.management');
         $item = SocialLinkRepository::findByIdOrFail($id);
         $data = $request->validated();
         $data['link'] = $data['url'] ?? $data['link'] ?? null;
@@ -59,16 +48,22 @@ class SocialLinkController extends Controller
 
         SocialLinkRepository::updateByRequest($item, $data);
 
-        return $this->redirectWithMessage(RedirectTypeEnum::UPDATE->value, 'admin.social-link.index');
+        return redirect()->route('admin.social-link.index')->with('success', 'Social link updated successfully.');
     }
 
     public function destroy($id)
     {
-        $this->checkAdminPermission('social.link.management');
         $item = SocialLinkRepository::findByIdOrFail($id);
 
-        SocialLinkRepository::delete($item);
+        $item->delete();
 
-        return $this->redirectWithMessage(RedirectTypeEnum::DELETE->value, 'admin.social-link.index');
+        return redirect()->route('admin.social-link.index')->with('success', 'Social link deleted successfully.');
+    }
+
+    private function perPage(Request $request): int
+    {
+        $perPage = (int) $request->input('per_page', 15);
+
+        return in_array($perPage, [10, 25, 50, 100], true) ? $perPage : 15;
     }
 }

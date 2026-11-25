@@ -6,6 +6,11 @@ use Illuminate\Foundation\Http\FormRequest;
 
 class CourseCategoryStoreRequest extends FormRequest
 {
+    public function authorize(): bool
+    {
+        return true;
+    }
+
     /**
      * Get the validation rules that apply to the request.
      */
@@ -14,7 +19,6 @@ class CourseCategoryStoreRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:255'],
             'slug' => ['required', 'unique:course_categories,slug'],
-            'parent_id' => ['nullable', 'exists:course_categories,id'],
             'parent_id' => ['nullable', 'exists:course_categories,id'],
             'icon' => ['required', 'image', 'max:255'],
             'status' => ['required'],

@@ -8,6 +8,11 @@ use Illuminate\Validation\ValidationException;
 
 class StudentProfileUpdateRequest extends FormRequest
 {
+    public function authorize(): bool
+    {
+        return true;
+    }
+
     function __construct()
     {
         setFormTabStep('profile_tab', 'profile');

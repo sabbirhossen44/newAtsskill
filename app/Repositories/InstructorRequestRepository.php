@@ -2,13 +2,14 @@
 
 namespace App\Repositories;
 
+use Arafat\LaravelRepository\Repository;
+
 use App\Services\TranslationService;
 
 use Illuminate\Support\Facades\Schema;
 
 use Illuminate\Pagination\LengthAwarePaginator;
 
-use App\Enums\InstructorRequestStatusEnum;
 use App\Models\InstructorRequest;
 use App\Models\InstructorRequestSetting;
 use App\Models\User;
@@ -17,7 +18,7 @@ use App\Services\FileUploadService;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\UploadedFile;
 
-class InstructorRequestRepository
+class InstructorRequestRepository extends Repository
 {
     public static function model()
     {
@@ -55,7 +56,7 @@ class InstructorRequestRepository
         $instructorRequest = static::model()::query()->updateOrCreate(
             ['user_id' => $userId],
             [
-                'status' => InstructorRequestStatusEnum::PENDING->value,
+                'status' => 'pending',
                 'payout_account' => $data['payout_account'],
                 'payout_information' => $data['payout_information'],
                 'extra_information' => $data['extra_information'] ?? null,
@@ -90,7 +91,7 @@ class InstructorRequestRepository
         }
 
         return static::model()::query()->where('user_id', $user->id)
-                ->where('status', InstructorRequestStatusEnum::APPROVED->value)->exists()
+                ->where('status', 'approved')->exists()
             || (bool) $user->instructorInfo?->status;
     }
 
@@ -114,12 +115,16 @@ class InstructorRequestRepository
 
     public static function findByIdOrFail(int $id): mixed
     {
-        return static::model()::query()->findOrFail($id);
+        return self::findOrFail($id);
     }
 
     public static function delete(mixed $record): bool
     {
-        return (bool) $record->delete();
+        if ($record instanceof \Illuminate\Database\Eloquent\Model) {
+            return (bool) $record->delete();
+        }
+
+        return (bool) static::query()->destroy($record);
     }
 
     public static function toggleStatus(mixed $record): bool
@@ -213,7 +218,7 @@ class InstructorRequestRepository
     {
         [$direct, $translations] = static::splitAdminData($data);
 
-        $record = static::model()::query()->create($direct);
+        $record = self::create($direct);
         static::syncAdminTranslations($record, $translations);
 
         return $record->fresh();
@@ -223,7 +228,7 @@ class InstructorRequestRepository
     {
         [$direct, $translations] = static::splitAdminData($data);
 
-        $updated = $record->update($direct);
+        $updated = self::update($record, $direct);
         static::syncAdminTranslations($record, $translations);
 
         return (bool) $updated;

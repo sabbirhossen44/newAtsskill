@@ -17,12 +17,12 @@ class CartController extends Controller
         $this->cart = $cart;
     }
 
-    function index()
+    public function index()
     {
         return view('frontend.pages.cart.index', $this->cart->summary());
     }
 
-    function addToCart(Request $request, string $id)
+    public function addToCart(Request $request, string $id)
     {
         if ($this->cart->containsCourse($id)) {
             return response(['status' => 'error', 'message' => 'Already added to cart!']);
@@ -44,7 +44,7 @@ class CartController extends Controller
         return response($response);
     }
 
-    function removeCartItem(string $rowId)
+    public function removeCartItem(string $rowId)
     {
         $removed = $this->cart->remove($rowId);
 
@@ -60,7 +60,7 @@ class CartController extends Controller
         return redirect()->back()->with($notification);
     }
 
-    function applyCoupon(ApplyCouponRequest $request)
+    public function applyCoupon(ApplyCouponRequest $request)
     {
         $result = $this->cart->applyCoupon($request->coupon);
 
@@ -74,7 +74,7 @@ class CartController extends Controller
         ));
     }
 
-    function removeCoupon()
+    public function removeCoupon()
     {
         $this->cart->destroyCouponSession();
 
@@ -86,7 +86,7 @@ class CartController extends Controller
         return redirect()->back()->with($notification);
     }
 
-    function buyNow(string $slug)
+    public function buyNow(string $slug)
     {
         $course = CourseRepository::findActiveBySlugOrFail($slug);
 

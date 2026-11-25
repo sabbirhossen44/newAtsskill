@@ -2,9 +2,7 @@
 
 namespace App\Http\Controllers\Frontend;
 
-use App\Enums\RedirectTypeEnum;
 use App\Http\Controllers\Controller;
-use App\Http\Controllers\Concerns\RedirectsWithMessage;
 use App\Http\Requests\Frontend\InstructorProfilePayoutUpdateRequest;
 use App\Http\Requests\Frontend\StudentBioUpdateRequest;
 use App\Http\Requests\Frontend\StudentEducationStoreRequest;
@@ -25,9 +23,7 @@ use Illuminate\View\View;
 
 class InstructorProfileSettingController extends Controller
 {
-    use RedirectsWithMessage;
-
-    function index(): View
+    public function index(): View
     {
         // set profile tab
         if (! session('profile_tab')) {
@@ -37,56 +33,56 @@ class InstructorProfileSettingController extends Controller
         return view('frontend.instructor-dashboard.profile.index', InstructorProfileRepository::profileContext(Auth::user()));
     }
 
-    function updateProfile(StudentProfileUpdateRequest $request): RedirectResponse
+    public function updateProfile(StudentProfileUpdateRequest $request): RedirectResponse
     {
         // The instructor form posts the avatar as `avatar`, not `image`.
         UserRepository::updateProfileByRequest(Auth::user(), $request->validated(), $request->file('avatar'), $request->file('cover'));
 
-        return $this->redirectWithMessage(RedirectTypeEnum::UPDATE->value, 'instructor.setting.index');
+        return redirect()->route('instructor.setting.index')->with(['messege' => __('Updated successfully'), 'alert-type' => 'success']);
     }
 
-    function updateBio(StudentBioUpdateRequest $request): RedirectResponse
+    public function updateBio(StudentBioUpdateRequest $request): RedirectResponse
     {
         UserRepository::updateBioByRequest(Auth::user(), $request->validated());
 
-        return $this->redirectWithMessage(RedirectTypeEnum::UPDATE->value, 'instructor.setting.index');
+        return redirect()->route('instructor.setting.index')->with(['messege' => __('Updated successfully'), 'alert-type' => 'success']);
     }
 
-    function updatePassword(StudentPasswordUpdateRequest $request): RedirectResponse
+    public function updatePassword(StudentPasswordUpdateRequest $request): RedirectResponse
     {
         UserRepository::updatePassword(Auth::user(), $request->validated()['password']);
 
-        return $this->redirectWithMessage(RedirectTypeEnum::UPDATE->value, 'instructor.setting.index');
+        return redirect()->route('instructor.setting.index')->with(['messege' => __('Updated successfully'), 'alert-type' => 'success']);
     }
 
-    function showExperienceModal(): string
+    public function showExperienceModal(): string
     {
         return view('frontend.instructor-dashboard.profile.modals.experience-modal')->render();
     }
 
-    function storeExperience(StudentExperienceStoreRequest $request): RedirectResponse
+    public function storeExperience(StudentExperienceStoreRequest $request): RedirectResponse
     {
         UserExperienceRepository::storeByRequest(Auth::user()->id, $request->validated());
 
-        return $this->redirectWithMessage(RedirectTypeEnum::CREATE->value, 'instructor.setting.index');
+        return redirect()->route('instructor.setting.index')->with(['messege' => __('Created successfully'), 'alert-type' => 'success']);
     }
 
-    function editExperienceModal(string $id): string
+    public function editExperienceModal(string $id): string
     {
         $experience = UserExperienceRepository::findById((int) $id);
 
         return view('frontend.instructor-dashboard.profile.modals.edit-experience-modal', compact('experience'))->render();
     }
 
-    function updateExperience(StudentExperienceStoreRequest $request, string $id): RedirectResponse
+    public function updateExperience(StudentExperienceStoreRequest $request, string $id): RedirectResponse
     {
         $experience = UserExperienceRepository::findForUserOrFail((int) $id, Auth::user()->id);
         UserExperienceRepository::updateByRequest($experience, $request->validated());
 
-        return $this->redirectWithMessage(RedirectTypeEnum::UPDATE->value, 'instructor.setting.index');
+        return redirect()->route('instructor.setting.index')->with(['messege' => __('Updated successfully'), 'alert-type' => 'success']);
     }
 
-    function destroyExperience(string $id): JsonResponse
+    public function destroyExperience(string $id): JsonResponse
     {
         setFormTabStep('profile_tab', 'education');
 
@@ -98,34 +94,34 @@ class InstructorProfileSettingController extends Controller
         ]);
     }
 
-    function addEducationModal(): string
+    public function addEducationModal(): string
     {
         return view('frontend.instructor-dashboard.profile.modals.add-education-modal')->render();
     }
 
-    function storeEducation(StudentEducationStoreRequest $request): RedirectResponse
+    public function storeEducation(StudentEducationStoreRequest $request): RedirectResponse
     {
         UserEducationRepository::storeByRequest(Auth::user()->id, $request->validated());
 
-        return $this->redirectWithMessage(RedirectTypeEnum::CREATE->value, 'instructor.setting.index');
+        return redirect()->route('instructor.setting.index')->with(['messege' => __('Created successfully'), 'alert-type' => 'success']);
     }
 
-    function editEducationModal(): string
+    public function editEducationModal(): string
     {
         $education = UserEducationRepository::findById((int) request('id'));
 
         return view('frontend.instructor-dashboard.profile.modals.edit-education-modal', compact('education'))->render();
     }
 
-    function updateEducation(StudentEducationStoreRequest $request, string $id): RedirectResponse
+    public function updateEducation(StudentEducationStoreRequest $request, string $id): RedirectResponse
     {
         $education = UserEducationRepository::findForUserOrFail((int) $id, Auth::user()->id);
         UserEducationRepository::updateByRequest($education, $request->validated());
 
-        return $this->redirectWithMessage(RedirectTypeEnum::UPDATE->value, 'instructor.setting.index');
+        return redirect()->route('instructor.setting.index')->with(['messege' => __('Updated successfully'), 'alert-type' => 'success']);
     }
 
-    function destroyEducation(string $id): JsonResponse
+    public function destroyEducation(string $id): JsonResponse
     {
         setFormTabStep('profile_tab', 'education');
 
@@ -137,24 +133,24 @@ class InstructorProfileSettingController extends Controller
         ]);
     }
 
-    function updateAddress(StudentProfileAddressUpdateRequest $request): RedirectResponse
+    public function updateAddress(StudentProfileAddressUpdateRequest $request): RedirectResponse
     {
         UserRepository::updateAddressByRequest(Auth::user(), $request->validated());
 
-        return $this->redirectWithMessage(RedirectTypeEnum::UPDATE->value, 'instructor.setting.index');
+        return redirect()->route('instructor.setting.index')->with(['messege' => __('Updated successfully'), 'alert-type' => 'success']);
     }
 
-    function updateSocials(StudentProfileSocialUpdateRequest $request): RedirectResponse
+    public function updateSocials(StudentProfileSocialUpdateRequest $request): RedirectResponse
     {
         UserRepository::updateSocialsByRequest(Auth::user(), $request->validated());
 
-        return $this->redirectWithMessage(RedirectTypeEnum::UPDATE->value, 'instructor.setting.index');
+        return redirect()->route('instructor.setting.index')->with(['messege' => __('Updated successfully'), 'alert-type' => 'success']);
     }
 
-    function updatePayout(InstructorProfilePayoutUpdateRequest $request): RedirectResponse
+    public function updatePayout(InstructorProfilePayoutUpdateRequest $request): RedirectResponse
     {
         InstructorRequestRepository::updatePayout(Auth::user()->id, $request->validated());
 
-        return $this->redirectWithMessage(RedirectTypeEnum::UPDATE->value, 'instructor.setting.index');
+        return redirect()->route('instructor.setting.index')->with(['messege' => __('Updated successfully'), 'alert-type' => 'success']);
     }
 }

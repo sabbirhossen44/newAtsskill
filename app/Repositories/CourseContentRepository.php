@@ -2,11 +2,12 @@
 
 namespace App\Repositories;
 
-use App\Http\Controllers\Concerns\SendsAppMail;
+use Arafat\LaravelRepository\Repository;
+
+use App\Services\AppMailService;
 use App\Models\Course;
 use App\Models\CourseChapterItem;
 use App\Models\CourseChapterLesson;
-use App\Enums\ChapterItemTypeEnum;
 use App\Models\CourseLiveClass;
 use App\Models\Enrollment;
 use App\Models\Quiz;
@@ -17,11 +18,14 @@ use Illuminate\Support\Facades\Storage;
 /**
  * Chapter-item / lesson / live-class / quiz writes for the instructor
  * course-content flow (moved from CourseContentController). Live-class
- * student mails go through the SendsAppMail concern, as before.
+ * student mails go through AppMailService, as before.
  */
-class CourseContentRepository
+class CourseContentRepository extends Repository
 {
-    use SendsAppMail;
+    public static function model()
+    {
+        return CourseChapterItem::class;
+    }
 
     public static function chaptersForCourse(string $courseId): Collection
     {
@@ -205,7 +209,9 @@ class CourseContentRepository
     /** Delete a chapter item with its quiz / lesson + files. */
     public static function destroyChapterItem(CourseChapterItem $chapterItem): void
     {
-        if ($chapterItem->type === ChapterItemTypeEnum::QUIZ) {
+        // Compare the raw attribute: the model casts `type` to an enum,
+        // so $chapterItem->type is an enum instance, not the string 'quiz'.
+        if (($chapterItem->getAttributes()['type'] ?? $chapterItem->type) === 'quiz') {
             $quiz = $chapterItem->quiz;
             $question = $quiz->questions;
             foreach ($question as $key => $question) {
@@ -241,6 +247,6 @@ class CourseContentRepository
             'start_time' => formattedDateTime($start_time),
             'join_url' => $join_url,
         ];
-        (new static)->sendLiveClassNotificationMailTrait($users, $data);
+        AppMailService::sendLiveClassNotificationMail($users, $data);
     }
 }

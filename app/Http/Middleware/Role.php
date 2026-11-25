@@ -15,10 +15,12 @@ class Role
      */
     public function handle(Request $request, Closure $next, string $role): Response
     {
-        if($request->user()->role?->value !== $role) {
-            if($request->user()->role?->value === 'instructor'){
+        $userRole = enum_value($request->user()?->role);
+
+        if ($userRole !== $role) {
+            if ($userRole === 'instructor') {
                 return redirect()->route('instructor.dashboard');
-            }elseif($request->user()->role?->value === 'student'){
+            } elseif ($userRole === 'student') {
                 return redirect()->route('student.dashboard');
             }
         }

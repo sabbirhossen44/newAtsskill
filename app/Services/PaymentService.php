@@ -2,7 +2,7 @@
 
 namespace App\Services;
 
-use App\Http\Controllers\Concerns\SendsMail;
+use App\Services\AppMailService;
 use App\Jobs\DefaultMailJob;
 use App\Mail\DefaultMail;
 use App\Models\BasicPayment;
@@ -15,7 +15,6 @@ use Illuminate\Support\Str;
 
 class PaymentService
 {
-    use SendsMail;
 
     /**
      * Gateways present (by key prefix) in the old payment_gateways /
@@ -260,7 +259,7 @@ class PaymentService
     public static function sendOrderCompletedMail(array $mailData): void
     {
         try {
-            self::setMailConfig();
+            AppMailService::configureMail();
 
             $template = EmailTemplate::where('name', 'order_completed')->first();
             if (! $template) {
@@ -273,7 +272,7 @@ class PaymentService
             $message = str_replace('{{paid_amount}}', $mailData['paid_amount'] ?? '', $message);
             $message = str_replace('{{payment_method}}', $mailData['payment_method'] ?? '', $message);
 
-            if (self::isQueable()) {
+            if (AppMailService::isQueable()) {
                 DefaultMailJob::dispatch($mailData, $message);
             } else {
                 Mail::to($mailData['email'])->send(new DefaultMail($mailData, $message));

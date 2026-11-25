@@ -2,10 +2,12 @@
 
 namespace App\Repositories;
 
+use Arafat\LaravelRepository\Repository;
+
 use App\Models\UserEducation;
 use Illuminate\Database\Eloquent\Collection;
 
-class UserEducationRepository
+class UserEducationRepository extends Repository
 {
     public static function model()
     {
@@ -14,7 +16,7 @@ class UserEducationRepository
 
     public static function findById(int $id): ?UserEducation
     {
-        return static::model()::query()->find($id);
+        return self::find($id);
     }
 
     public static function allForUser(int $userId): Collection
@@ -24,7 +26,7 @@ class UserEducationRepository
 
     public static function storeByRequest(int $userId, array $data): UserEducation
     {
-        return static::model()::query()->create(array_merge($data, [
+        return self::create(array_merge($data, [
             'user_id' => $userId,
         ]));
     }

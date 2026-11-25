@@ -21,7 +21,7 @@ class ApprovedInstructorMiddleware
     {
         $user = $request->user();
 
-        $approved = $user && $user->role?->value === 'instructor' && (
+        $approved = $user && enum_value($user->role) === 'instructor' && (
             InstructorRequest::where('user_id', $user->id)
                 ->where('status', InstructorRequestStatusEnum::APPROVED->value)->exists()
             || (bool) $user->instructorInfo?->status

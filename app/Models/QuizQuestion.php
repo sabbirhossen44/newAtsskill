@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Enums\QuizQuestionTypeEnum;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -14,12 +13,6 @@ class QuizQuestion extends Model
 
     protected $guarded = ['id'];
 
-    protected function casts(): array
-    {
-        return [
-            'type' => \App\Enums\QuizQuestionTypeEnum::class,
-        ];
-    }
 
     public function quiz(): BelongsTo
     {

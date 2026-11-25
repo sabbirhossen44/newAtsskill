@@ -4,9 +4,6 @@ namespace App\Http\Controllers\Admin;
 
 use App\Enums\CourseStatusEnum;
 use App\Http\Controllers\Controller;
-use App\Http\Controllers\Concerns\ChecksAdminPermissions;
-use App\Http\Controllers\Concerns\RedirectsWithMessage;
-use App\Enums\RedirectTypeEnum;
 use App\Http\Requests\Admin\CourseStoreRequest;
 use App\Models\CourseCategory;
 use App\Models\User;
@@ -25,9 +22,6 @@ use Illuminate\Pagination\Paginator;
  */
 class CourseController extends Controller
 {
-    use ChecksAdminPermissions;
-    use RedirectsWithMessage;
-
     protected function rules(): array
     {
         return [
@@ -51,7 +45,6 @@ class CourseController extends Controller
 
     public function index(Request $request)
     {
-        $this->checkAdminPermission('course.management');
         Paginator::useBootstrap();
         $courses = CourseRepository::paginateAdmin($request->input('keyword'), $this->perPage($request));
 
@@ -60,7 +53,6 @@ class CourseController extends Controller
 
     public function create()
     {
-        $this->checkAdminPermission('course.management');
         $categories = CourseCategory::all();
         $instructors = User::where('role', 'instructor')->get();
 
@@ -69,19 +61,17 @@ class CourseController extends Controller
 
     public function store(Request $request)
     {
-        $this->checkAdminPermission('course.management');
         $data = $request->validate($this->rules());
         $data['slug'] = $data['slug'] ?? \Illuminate\Support\Str::slug($data['title']);
         $request->validate(['slug' => 'unique:courses,slug']);
 
         CourseRepository::storeAdmin($data);
 
-        return $this->redirectWithMessage(RedirectTypeEnum::CREATE->value, 'admin.course.index');
+        return redirect()->route('admin.course.index')->with('success', 'Course created successfully.');
     }
 
     public function edit($id)
     {
-        $this->checkAdminPermission('course.management');
         $item = CourseRepository::findByIdOrFail($id);
         $categories = CourseCategory::all();
         $instructors = User::where('role', 'instructor')->get();
@@ -91,28 +81,25 @@ class CourseController extends Controller
 
     public function update(Request $request, $id)
     {
-        $this->checkAdminPermission('course.management');
         $course = CourseRepository::findByIdOrFail($id);
         $data = $request->validate($this->rules());
         $request->validate(['slug' => 'unique:courses,slug,'.$id]);
 
         CourseRepository::updateAdmin($course, $data);
 
-        return $this->redirectWithMessage(RedirectTypeEnum::UPDATE->value, 'admin.course.index');
+        return redirect()->route('admin.course.index')->with('success', 'Course updated successfully.');
     }
 
     public function destroy($id)
     {
-        $this->checkAdminPermission('course.management');
         $course = CourseRepository::findByIdOrFail($id);
         $course->delete();
 
-        return $this->redirectWithMessage(RedirectTypeEnum::DELETE->value, 'admin.course.index');
+        return redirect()->route('admin.course.index')->with('success', 'Course deleted successfully.');
     }
 
     public function statusUpdate(Request $request, $id)
     {
-        $this->checkAdminPermission('course.management');
         $course = CourseRepository::findByIdOrFail($id);
         $status = $request->input('status');
 
@@ -122,6 +109,13 @@ class CourseController extends Controller
             $course->update(['status' => $course->status === CourseStatusEnum::ACTIVE ? CourseStatusEnum::INACTIVE : CourseStatusEnum::ACTIVE]);
         }
 
-        return redirect()->back()->with(['messege' => __('Updated Successfully'), 'alert-type' => 'success']);
+        return redirect()->back()->with('success', __('Updated Successfully'));
+    }
+
+    private function perPage(Request $request): int
+    {
+        $perPage = (int) $request->input('per_page', 15);
+
+        return in_array($perPage, [10, 25, 50, 100], true) ? $perPage : 15;
     }
 }

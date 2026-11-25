@@ -2,6 +2,8 @@
 
 namespace App\Repositories;
 
+use Arafat\LaravelRepository\Repository;
+
 use App\Services\TranslationService;
 
 use Illuminate\Support\Facades\Schema;
@@ -12,7 +14,7 @@ use App\Models\BlogComment;
 use App\Models\Blog;
 use Illuminate\Support\Collection;
 
-class BlogCommentRepository
+class BlogCommentRepository extends Repository
 {
     public static function model()
     {
@@ -30,7 +32,7 @@ class BlogCommentRepository
 
     public static function storeByRequest(array $data): BlogComment
     {
-        return static::model()::query()->create([
+        return self::create([
             'blog_id' => $data['blog_id'],
             'user_id' => $data['user_id'],
             'comment' => $data['comment'],
@@ -58,11 +60,6 @@ class BlogCommentRepository
     public static function findByIdOrFail(int $id): mixed
     {
         return static::model()::query()->findOrFail($id);
-    }
-
-    public static function delete(mixed $record): bool
-    {
-        return (bool) $record->delete();
     }
 
     public static function toggleStatus(mixed $record): bool

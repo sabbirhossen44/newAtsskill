@@ -4,8 +4,6 @@ namespace App\Models;
 
 use App\Enums\CourseApprovalEnum;
 use App\Enums\CourseStatusEnum;
-use App\Enums\CourseTypeEnum;
-use App\Enums\LessonStorageEnum;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -32,10 +30,6 @@ class Course extends Model
             'downloadable' => 'boolean',
             'partner_instructor' => 'boolean',
             'qna' => 'boolean',
-            'type' => \App\Enums\CourseTypeEnum::class,
-            'status' => \App\Enums\CourseStatusEnum::class,
-            'is_approved' => \App\Enums\CourseApprovalEnum::class,
-            'demo_video_storage' => \App\Enums\LessonStorageEnum::class,
         ];
     }
 

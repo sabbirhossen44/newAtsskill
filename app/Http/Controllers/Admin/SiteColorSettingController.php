@@ -3,9 +3,6 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Http\Controllers\Concerns\ChecksAdminPermissions;
-use App\Http\Controllers\Concerns\RedirectsWithMessage;
-use App\Enums\RedirectTypeEnum;
 use App\Models\Setting;
 use App\Services\SettingService;
 use Illuminate\Http\Request;
@@ -18,15 +15,11 @@ use Illuminate\Pagination\Paginator;
  */
 class SiteColorSettingController extends Controller
 {
-    use ChecksAdminPermissions;
-    use RedirectsWithMessage;
-
     protected array $keys = ['primary_color', 'secondary_color', 'common_color_one',
         'common_color_two', 'common_color_three', 'common_color_four', 'common_color_five'];
 
     public function index(Request $request)
     {
-        $this->checkAdminPermission('appearance.management');
         Paginator::useBootstrap();
         $items = Setting::query()->whereIn('key', $this->keys)->latest()->paginate($this->perPage($request));
 
@@ -35,23 +28,19 @@ class SiteColorSettingController extends Controller
 
     public function create()
     {
-        $this->checkAdminPermission('appearance.management');
-
         return view('admin.site-color-setting.create');
     }
 
     public function store(Request $request)
     {
-        $this->checkAdminPermission('appearance.management');
         $request->validate(['name' => 'required|string|max:255', 'value' => 'nullable|string']);
         SettingService::set($request->input('name'), $request->input('value', ''));
 
-        return $this->redirectWithMessage(RedirectTypeEnum::CREATE->value, 'admin.site-color-setting.index');
+        return redirect()->route('admin.site-color-setting.index')->with('success', 'Site color setting created successfully.');
     }
 
     public function edit($id)
     {
-        $this->checkAdminPermission('appearance.management');
         $item = Setting::findOrFail($id);
 
         return view('admin.site-color-setting.edit', ['item' => $item]);
@@ -59,7 +48,6 @@ class SiteColorSettingController extends Controller
 
     public function update(Request $request, $id)
     {
-        $this->checkAdminPermission('appearance.management');
         $request->validate([
             'primary_color' => 'nullable|string',
             'secondary_color' => 'nullable|string',
@@ -83,14 +71,20 @@ class SiteColorSettingController extends Controller
         ]);
         SettingService::forgetCache();
 
-        return $this->redirectWithMessage(RedirectTypeEnum::UPDATE->value, 'admin.site-color-setting.index');
+        return redirect()->route('admin.site-color-setting.index')->with('success', 'Site color setting updated successfully.');
     }
 
     public function destroy($id)
     {
-        $this->checkAdminPermission('appearance.management');
         Setting::findOrFail($id)->delete();
 
-        return $this->redirectWithMessage(RedirectTypeEnum::DELETE->value, 'admin.site-color-setting.index');
+        return redirect()->route('admin.site-color-setting.index')->with('success', 'Site color setting deleted successfully.');
+    }
+
+    private function perPage(Request $request): int
+    {
+        $perPage = (int) $request->input('per_page', 15);
+
+        return in_array($perPage, [10, 25, 50, 100], true) ? $perPage : 15;
     }
 }

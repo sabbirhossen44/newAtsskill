@@ -29,7 +29,7 @@ class InstructorDashboardController extends Controller
         ));
     }
 
-    function mySells()
+    public function mySells()
     {
         $orders = OrderRepository::mySellsForInstructor(auth('web')->user()->id);
 

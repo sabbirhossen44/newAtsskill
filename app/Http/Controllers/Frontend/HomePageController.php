@@ -17,7 +17,7 @@ use Illuminate\View\View;
 
 class HomePageController extends Controller
 {
-    function index(): View
+    public function index(): View
     {
         $siteTheme = Session::has('demo_theme') ? Session::get('demo_theme') : (SettingService::all()['site_theme'] ?? 'theme-one');
         $themePath = ($siteTheme == 'theme-two') ? 'frontend.home-two.index' :
@@ -27,17 +27,19 @@ class HomePageController extends Controller
         return view($themePath, HomepageRepository::forHomepage());
     }
 
-    function allInstructors(Request $request)
+    public function allInstructors(Request $request)
     {
         $instructors = HomepageRepository::paginateAllInstructors(
             $request->url(),
-            LengthAwarePaginator::resolveCurrentPage()
+            LengthAwarePaginator::resolveCurrentPage(),
+            $this->perPage($request),
+            $request->query()
         );
 
         return view('frontend.pages.instructors.index', compact('instructors'));
     }
 
-    function setCurrency($code)
+    public function setCurrency($code)
     {
         $currency = allCurrencies()->where('currency_code', $code)->first();
         if (session()->has('currency_code')) {
@@ -56,22 +58,22 @@ class HomePageController extends Controller
         return redirect()->back();
     }
 
-    function countries()
+    public function countries()
     {
         return response()->json(LocationRepository::countries());
     }
 
-    function states($country_id)
+    public function states($country_id)
     {
         return response()->json(LocationRepository::statesByCountry((int) $country_id));
     }
 
-    function cities($state_id)
+    public function cities($state_id)
     {
         return response()->json(LocationRepository::citiesByState((int) $state_id));
     }
 
-    function instructorDetails($id, $slug = null)
+    public function instructorDetails($id, $slug = null)
     {
         $instructor = HomepageRepository::findInstructorForDetails((int) $id);
 
@@ -82,7 +84,7 @@ class HomePageController extends Controller
         return view('frontend.pages.instructors.show', compact('instructor'));
     }
 
-    function quickConnect(QuickConnectRequest $request, $id)
+    public function quickConnect(QuickConnectRequest $request, $id)
     {
         $instructor = UserRepository::findOrFail((int) $id);
 
@@ -95,17 +97,30 @@ class HomePageController extends Controller
         return redirect()->back()->with(['messege' => __('Message sent successfully'), 'alert-type' => 'success']);
     }
 
-    function changeTheme($name)
+    public function changeTheme($name)
     {
         session()->put('demo_theme', $name);
 
         return redirect()->back();
     }
 
-    function customPage($slug)
+    public function customPage($slug)
     {
         $page = PageRepository::findBySlugOrFail($slug);
 
         return view('frontend.pages.custom-page', compact('page'));
+    }
+
+    /**
+     * Frontend listing page size. allSolution's admin perPage() whitelists
+     * [10, 25, 50, 100] with default 15; the public instructors listing
+     * has always shown 12 per page, so that size is kept here.
+     * Protected (not private) only because the base Controller still
+     * defines protected perPage(); flip to private perPage() once the
+     * base method is removed per spec section 1.
+     */
+    private function perPage(Request $request, int $default = 12): int
+    {
+        return $default;
     }
 }

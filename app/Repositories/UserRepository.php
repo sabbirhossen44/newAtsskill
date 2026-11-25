@@ -2,22 +2,21 @@
 
 namespace App\Repositories;
 
+use Arafat\LaravelRepository\Repository;
+
 use App\Services\TranslationService;
 
 use Illuminate\Support\Facades\Schema;
 
 use Illuminate\Pagination\LengthAwarePaginator;
 
-use App\Enums\UserBannedEnum;
-use App\Enums\UserRoleEnum;
-use App\Enums\UserStatusEnum;
 use App\Models\User;
 use App\Services\FileUploadService;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 
-class UserRepository
+class UserRepository extends Repository
 {
     public static function model()
     {
@@ -26,12 +25,12 @@ class UserRepository
 
     public static function findById(int $id): ?User
     {
-        return static::model()::query()->find($id);
+        return self::find($id);
     }
 
-    public static function findOrFail(int $id): User
+    public static function findOrFail($primaryKey): User
     {
-        return static::model()::query()->findOrFail($id);
+        return static::model()::query()->findOrFail($primaryKey);
     }
 
     public static function findByEmail(string $email): ?User
@@ -41,12 +40,12 @@ class UserRepository
 
     public static function storeByRequest(array $data): User
     {
-        return static::model()::query()->create($data);
+        return self::create($data);
     }
 
     public static function updateByRequest(User $user, array $data): bool
     {
-        return $user->update($data);
+        return self::update($user, $data);
     }
 
     public static function updateStatus(User $user, string $status): bool
@@ -66,18 +65,18 @@ class UserRepository
 
     public static function makeInstructor(User $user): bool
     {
-        return $user->update(['role' => UserRoleEnum::INSTRUCTOR->value]);
+        return $user->update(['role' => 'instructor']);
     }
 
     public static function registerByRequest(array $data): User
     {
-        return static::model()::query()->create([
-            'role' => UserRoleEnum::STUDENT->value,
+        return self::create([
+            'role' => 'student',
             'name' => $data['name'],
             'email' => $data['email'],
             'phone' => $data['phone'],
-            'status' => UserStatusEnum::ACTIVE->value,
-            'is_banned' => UserBannedEnum::NO->value,
+            'status' => 'active',
+            'is_banned' => 'no',
             'password' => Hash::make($data['password']),
             'verification_token' => Str::random(100),
         ]);
@@ -85,7 +84,7 @@ class UserRepository
 
     public static function createSocialUser(array $data): User
     {
-        return static::model()::query()->create($data);
+        return self::create($data);
     }
 
     public static function findByVerificationToken(string $token): ?User
@@ -153,7 +152,7 @@ class UserRepository
             $data['cover'] = FileUploadService::upload($cover, 'uploads/custom-images/');
         }
 
-        return $user->update($data);
+        return self::update($user, $data);
     }
 
     public static function updateBioByRequest(User $user, array $data): bool
@@ -206,12 +205,16 @@ class UserRepository
 
     public static function findByIdOrFail(int $id): mixed
     {
-        return static::model()::query()->findOrFail($id);
+        return self::findOrFail($id);
     }
 
     public static function delete(mixed $record): bool
     {
-        return (bool) $record->delete();
+        if ($record instanceof \Illuminate\Database\Eloquent\Model) {
+            return (bool) $record->delete();
+        }
+
+        return (bool) static::query()->destroy($record);
     }
 
     public static function toggleStatus(mixed $record): bool

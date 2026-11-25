@@ -2,34 +2,36 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Enums\RedirectTypeEnum;
-use App\Http\Controllers\Concerns\ChecksAdminPermissions;
-use App\Http\Controllers\Concerns\RedirectsWithMessage;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\AdminRequest;
+use App\Models\Admin;
 use App\Repositories\AdminRepository;
 use App\Repositories\RoleRepository;
 use Illuminate\Http\Request;
 
 class AdminController extends Controller
 {
-    use ChecksAdminPermissions;
-    use RedirectsWithMessage;
-
     public function index(Request $request)
     {
-        $this->checkAdminPermission('admin.view');
+        $query = Admin::query();
 
-        $admins = AdminRepository::paginate($this->perPage($request));
+        if ($request->filled('search')) {
+            $search = trim($request->string('search'));
+            $query->where(fn ($q) => $q->where('name', 'like', "%{$search}%")->orWhere('email', 'like', "%{$search}%"));
+        }
 
-        return view('admin.admin-list.index')->with([
-            'admins' => $admins,
+        if ($request->filled('status') && $request->status !== 'all') {
+            $query->where('status', $request->status);
+        }
+
+        return view('admin.admin-list.index', [
+            'admins' => $query->latest()->paginate($this->perPage($request))->withQueryString(),
+            'filters' => $request->only(['search', 'status', 'per_page']),
         ]);
     }
 
     public function create()
     {
-        $this->checkAdminPermission('admin.create');
         $roles = RoleRepository::allRoles();
 
         return view('admin.admin-list.create', compact('roles'));
@@ -37,16 +39,14 @@ class AdminController extends Controller
 
     public function store(AdminRequest $request)
     {
-        $this->checkAdminPermission('admin.store');
-
         AdminRepository::storeByRequest($request->validated());
 
-        return $this->redirectWithMessage(RedirectTypeEnum::CREATE->value, 'admin.admin.index');
+        return redirect()->route('admin.admin.index')
+            ->with('success', 'Admin created successfully.');
     }
 
     public function edit($id)
     {
-        $this->checkAdminPermission('admin.edit');
         $admin = AdminRepository::findByIdOrFail($id);
         $roles = RoleRepository::allRoles();
 
@@ -55,38 +55,52 @@ class AdminController extends Controller
 
     public function update(AdminRequest $request, $id)
     {
-        $this->checkAdminPermission('admin.update');
         $admin = AdminRepository::findByIdOrFail($id);
-        abort_if($admin->id == 1, 403);
 
         AdminRepository::updateByRequest($admin, $request->validated());
 
-        return $this->redirectWithMessage(RedirectTypeEnum::UPDATE->value, 'admin.admin.index');
+        return redirect()->route('admin.admin.index')
+            ->with('success', 'Admin updated successfully.');
     }
 
     public function destroy($id)
     {
-        $this->checkAdminPermission('admin.delete');
         $admin = AdminRepository::findByIdOrFail($id);
-        abort_if($admin->id == 1, 403);
 
-        AdminRepository::delete($admin);
+        if ($admin->id === auth('admin')->id()) {
+            return back()->with('error', 'You cannot delete your own account.');
+        }
 
-        return $this->redirectWithMessage(RedirectTypeEnum::DELETE->value, 'admin.admin.index');
+        $admin->delete();
+
+        return redirect()->route('admin.admin.index')
+            ->with('success', 'Admin deleted successfully.');
     }
 
-    public function changeStatus($id)
+    public function changeStatus(Request $request, $id)
     {
-        $this->checkAdminPermission('admin.update');
         $admin = AdminRepository::findByIdOrFail($id);
-        abort_if($admin->id == 1, 403);
+
+        if ($admin->id === auth('admin')->id()) {
+            return back()->with('error', 'You cannot deactivate your own account.');
+        }
 
         AdminRepository::toggleStatus($admin);
-        $notification = __('Updated Successfully');
 
-        return response()->json([
-            'success' => true,
-            'message' => $notification,
-        ]);
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Admin status updated successfully.',
+            ]);
+        }
+
+        return back()->with('success', 'Admin status updated successfully.');
+    }
+
+    private function perPage(Request $request): int
+    {
+        $perPage = (int) $request->input('per_page', 15);
+
+        return in_array($perPage, [10, 25, 50, 100], true) ? $perPage : 15;
     }
 }

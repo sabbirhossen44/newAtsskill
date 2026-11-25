@@ -2,9 +2,11 @@
 
 namespace App\Repositories;
 
+use Arafat\LaravelRepository\Repository;
+
 use App\Models\SocialiteCredential;
 
-class SocialiteCredentialRepository
+class SocialiteCredentialRepository extends Repository
 {
     public static function model()
     {
@@ -13,7 +15,7 @@ class SocialiteCredentialRepository
 
     public static function findById(int $id): ?SocialiteCredential
     {
-        return static::model()::query()->find($id);
+        return self::find($id);
     }
 
     public static function findForUser(int $userId, string $providerName, string $providerId): ?SocialiteCredential
@@ -26,7 +28,7 @@ class SocialiteCredentialRepository
 
     public static function storeByRequest(int $userId, array $data): SocialiteCredential
     {
-        return static::model()::query()->create(array_merge($data, [
+        return self::create(array_merge($data, [
             'user_id' => $userId,
         ]));
     }

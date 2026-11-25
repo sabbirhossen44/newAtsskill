@@ -2,9 +2,6 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Enums\RedirectTypeEnum;
-use App\Http\Controllers\Concerns\ChecksAdminPermissions;
-use App\Http\Controllers\Concerns\RedirectsWithMessage;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\SectionRequest;
 use App\Repositories\BannerSectionRepository;
@@ -14,12 +11,8 @@ use Illuminate\Pagination\Paginator;
 
 class BannerSectionController extends Controller
 {
-    use ChecksAdminPermissions;
-    use RedirectsWithMessage;
-
     public function index(Request $request)
     {
-        $this->checkAdminPermission('section.management');
         Paginator::useBootstrap();
         $sections = BannerSectionRepository::paginateAdmin($request->input('keyword') ?? $request->input('search'), $this->perPage($request));
         return view('admin.banner-section.index', ['sections' => $sections, 'items' => $sections]);
@@ -27,13 +20,11 @@ class BannerSectionController extends Controller
 
     public function create()
     {
-        $this->checkAdminPermission('section.management');
         return view('admin.banner-section.create', []);
     }
 
     public function store(SectionRequest $request)
     {
-        $this->checkAdminPermission('section.management');
         $data = $request->validated();
         if ($request->hasFile('image')) {
             $data['bg_image'] = UploadService::store($request->file('image'));
@@ -41,19 +32,17 @@ class BannerSectionController extends Controller
 
         BannerSectionRepository::storeByRequest($data);
 
-        return $this->redirectWithMessage(RedirectTypeEnum::CREATE->value, 'admin.banner-section.index');
+        return redirect()->route('admin.banner-section.index')->with('success', 'Banner section created successfully.');
     }
 
     public function edit($id)
     {
-        $this->checkAdminPermission('section.management');
         $item = BannerSectionRepository::findByIdOrFail($id);
         return view('admin.banner-section.edit', ['item' => $item, 'section' => $item]);
     }
 
     public function update(SectionRequest $request, $id)
     {
-        $this->checkAdminPermission('section.management');
         $item = BannerSectionRepository::findByIdOrFail($id);
         $data = $request->validated();
         if ($request->hasFile('image')) {
@@ -62,16 +51,22 @@ class BannerSectionController extends Controller
 
         BannerSectionRepository::updateByRequest($item, $data);
 
-        return $this->redirectWithMessage(RedirectTypeEnum::UPDATE->value, 'admin.banner-section.index');
+        return redirect()->route('admin.banner-section.index')->with('success', 'Banner section updated successfully.');
     }
 
     public function destroy($id)
     {
-        $this->checkAdminPermission('section.management');
         $item = BannerSectionRepository::findByIdOrFail($id);
 
-        BannerSectionRepository::delete($item);
+        $item->delete();
 
-        return $this->redirectWithMessage(RedirectTypeEnum::DELETE->value, 'admin.banner-section.index');
+        return redirect()->route('admin.banner-section.index')->with('success', 'Banner section deleted successfully.');
+    }
+
+    private function perPage(Request $request): int
+    {
+        $perPage = (int) $request->input('per_page', 15);
+
+        return in_array($perPage, [10, 25, 50, 100], true) ? $perPage : 15;
     }
 }

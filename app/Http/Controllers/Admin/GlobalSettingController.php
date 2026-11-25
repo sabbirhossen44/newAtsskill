@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Http\Controllers\Concerns\ChecksAdminPermissions;
 use App\Models\CustomCode;
 use App\Models\CustomPagination;
 use App\Models\MarketingSetting;
@@ -27,11 +26,8 @@ use Illuminate\Support\Facades\Hash;
  */
 class GlobalSettingController extends Controller
 {
-    use ChecksAdminPermissions;
-
     public function general_setting()
     {
-        $this->checkAdminPermission('setting.view');
         $custom_paginations = CustomPagination::all();
         $all_timezones = \DateTimeZone::listIdentifiers();
 
@@ -40,7 +36,6 @@ class GlobalSettingController extends Controller
 
     public function commission_setting()
     {
-        $this->checkAdminPermission('setting.view');
         $commission = (object) [
             'commission_rate' => setting('commission_rate'),
             'instructor_commission' => setting('instructor_commission'),
@@ -52,7 +47,6 @@ class GlobalSettingController extends Controller
 
     public function update_commission(Request $request)
     {
-        $this->checkAdminPermission('setting.update');
         $request->validate([
             'commission_rate' => 'nullable|numeric',
             'instructor_commission' => 'nullable|numeric',
@@ -70,12 +64,11 @@ class GlobalSettingController extends Controller
             }
         }
 
-        return redirect()->back()->with(['messege' => __('Update Successfully'), 'alert-type' => 'success']);
+        return redirect()->back()->with('success', __('Update Successfully'));
     }
 
     public function update_general_setting(Request $request)
     {
-        $this->checkAdminPermission('setting.update');
         $request->validate(['app_name' => 'required|string|max:255']);
 
         foreach (['app_name', 'timezone', 'is_queable', 'live_mail_send', 'site_address', 'site_email',
@@ -92,24 +85,22 @@ class GlobalSettingController extends Controller
         }
         Cache::forget('corn_working');
 
-        return redirect()->back()->with(['messege' => __('Update Successfully'), 'alert-type' => 'success']);
+        return redirect()->back()->with('success', __('Update Successfully'));
     }
 
     public function update_logo_favicon(Request $request)
     {
-        $this->checkAdminPermission('setting.update');
         foreach (['logo' => 'logo', 'favicon' => 'favicon', 'preloader' => 'preloader'] as $field => $key) {
             if ($request->hasFile($field)) {
                 SettingService::set($key, UploadService::store($request->file($field), 'uploads/custom-images/', setting($key)));
             }
         }
 
-        return redirect()->back()->with(['messege' => __('Update Successfully'), 'alert-type' => 'success']);
+        return redirect()->back()->with('success', __('Update Successfully'));
     }
 
     public function seo_setting()
     {
-        $this->checkAdminPermission('setting.view');
         $pages = SeoSetting::all();
         $row = $pages->first();
         $seo = (object) array_merge($row ? $row->toArray() : [], [
@@ -123,7 +114,6 @@ class GlobalSettingController extends Controller
 
     public function update_seo_setting(Request $request, $id = null)
     {
-        $this->checkAdminPermission('setting.update');
         $request->validate([
             'seo_title' => 'nullable|string',
             'seo_description' => 'nullable|string',
@@ -148,13 +138,11 @@ class GlobalSettingController extends Controller
             SettingService::set('meta_description', $request->meta_description);
         }
 
-        return redirect()->back()->with(['messege' => __('Update Successfully'), 'alert-type' => 'success']);
+        return redirect()->back()->with('success', __('Update Successfully'));
     }
 
     public function crediential_setting()
     {
-        $this->checkAdminPermission('setting.view');
-
         return view('admin.global-setting.credientials.index');
     }
 
@@ -169,92 +157,79 @@ class GlobalSettingController extends Controller
 
     public function update_google_captcha(Request $request)
     {
-        $this->checkAdminPermission('setting.update');
         $this->saveCredentialKeys($request, ['recaptcha_site_key', 'recaptcha_secret_key', 'google_captcha_status', 'google_recaptcha_status']);
 
-        return redirect()->back()->with(['messege' => __('Update Successfully'), 'alert-type' => 'success']);
+        return redirect()->back()->with('success', __('Update Successfully'));
     }
 
     public function update_tawk_chat(Request $request)
     {
-        $this->checkAdminPermission('setting.update');
         $this->saveCredentialKeys($request, ['tawk_property_id', 'tawk_chat_status', 'tawk_widget_id']);
 
-        return redirect()->back()->with(['messege' => __('Update Successfully'), 'alert-type' => 'success']);
+        return redirect()->back()->with('success', __('Update Successfully'));
     }
 
     public function update_google_analytic(Request $request)
     {
-        $this->checkAdminPermission('setting.update');
         $this->saveCredentialKeys($request, ['google_analytics_id', 'google_analytic_status', 'google_tagmanager_id']);
 
-        return redirect()->back()->with(['messege' => __('Update Successfully'), 'alert-type' => 'success']);
+        return redirect()->back()->with('success', __('Update Successfully'));
     }
 
     public function update_facebook_pixel(Request $request)
     {
-        $this->checkAdminPermission('setting.update');
         $this->saveCredentialKeys($request, ['facebook_pixel_id', 'facebook_pixel_status']);
 
-        return redirect()->back()->with(['messege' => __('Update Successfully'), 'alert-type' => 'success']);
+        return redirect()->back()->with('success', __('Update Successfully'));
     }
 
     public function update_social_login(Request $request)
     {
-        $this->checkAdminPermission('setting.update');
         $this->saveCredentialKeys($request, ['google_client_id', 'google_client_secret', 'facebook_client_id',
             'facebook_client_secret', 'google_login_status', 'facebook_login_status']);
 
-        return redirect()->back()->with(['messege' => __('Update Successfully'), 'alert-type' => 'success']);
+        return redirect()->back()->with('success', __('Update Successfully'));
     }
 
     public function update_aws_cloud(Request $request)
     {
-        $this->checkAdminPermission('setting.update');
         $this->saveCredentialKeys($request, ['aws_bucket', 'aws_access_key', 'aws_secret_key', 'aws_region', 'aws_status']);
 
-        return redirect()->back()->with(['messege' => __('Update Successfully'), 'alert-type' => 'success']);
+        return redirect()->back()->with('success', __('Update Successfully'));
     }
 
     public function cache_clear()
     {
-        $this->checkAdminPermission('setting.update');
-
         return view('admin.global-setting.cache_clear');
     }
 
     public function cache_clear_confirm()
     {
-        $this->checkAdminPermission('setting.update');
         Artisan::call('optimize:clear');
 
-        return redirect()->back()->with(['messege' => __('Cache cleared successfully'), 'alert-type' => 'success']);
+        return redirect()->back()->with('success', __('Cache cleared successfully'));
     }
 
     public function database_clear()
     {
-        $this->checkAdminPermission('setting.view');
-
         return view('admin.global-setting.database_clear');
     }
 
     public function database_clear_success(Request $request)
     {
         if (! Hash::check($request->input('password', ''), auth('admin')->user()->password)) {
-            return redirect()->back()->with(['messege' => __('Passwords do not match.'), 'alert-type' => 'error']);
+            return redirect()->back()->with('error', __('Passwords do not match.'));
         }
-        $this->checkAdminPermission('setting.update');
         Artisan::call('migrate:fresh');
         Artisan::call('db:seed');
         Artisan::call('optimize:clear');
         $this->deleteDirectoryContents(public_path('uploads/custom-images'));
 
-        return redirect()->back()->with(['messege' => __('Database Cleared Successfully'), 'alert-type' => 'success']);
+        return redirect()->back()->with('success', __('Database Cleared Successfully'));
     }
 
     public function customCode($type = null)
     {
-        $this->checkAdminPermission('setting.view');
         $customCode = CustomCode::first();
         if (! $customCode) {
             $customCode = new CustomCode();
@@ -274,7 +249,6 @@ class GlobalSettingController extends Controller
 
     public function customCodeUpdate(Request $request)
     {
-        $this->checkAdminPermission('setting.update');
         $validated = $request->validate([
             'css' => 'sometimes',
             'javascript' => 'sometimes',
@@ -286,7 +260,7 @@ class GlobalSettingController extends Controller
         $customCode->save();
         Cache::forget('customCode');
 
-        return redirect()->back()->with(['messege' => __('Updated Successfully'), 'alert-type' => 'success']);
+        return redirect()->back()->with('success', __('Updated Successfully'));
     }
 
     public function systemUpdate()
@@ -308,7 +282,6 @@ class GlobalSettingController extends Controller
 
     public function systemUpdateStore(Request $request)
     {
-        $this->checkAdminPermission('setting.update');
         $request->validate(['zip_file' => 'required|mimes:zip']);
 
         $zipFilePath = public_path('upload/update.zip');
@@ -322,7 +295,6 @@ class GlobalSettingController extends Controller
 
     public function marketing_setting()
     {
-        $this->checkAdminPermission('setting.view');
         $marketing = (object) [
             'data_layer' => MarketingSetting::where('key', 'data_layer')->first()?->value ?? setting('google_data_layer'),
         ];
@@ -332,11 +304,10 @@ class GlobalSettingController extends Controller
 
     public function update_google_data_layer(Request $request)
     {
-        $this->checkAdminPermission('setting.update');
         MarketingSetting::updateOrCreate(['key' => 'data_layer'], ['value' => $request->input('data_layer', '')]);
         SettingService::set('google_data_layer', $request->input('data_layer', ''));
 
-        return redirect()->back()->with(['messege' => __('Update Successfully'), 'alert-type' => 'success']);
+        return redirect()->back()->with('success', __('Update Successfully'));
     }
 
     protected function deleteDirectoryContents(string $path): void

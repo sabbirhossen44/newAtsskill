@@ -2,14 +2,16 @@
 
 namespace App\Http\Requests\Admin;
 
+use App\Enums\CouponStatusEnum;
+use App\Enums\CouponTypeEnum;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
 
 class CouponRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return \Illuminate\Support\Facades\Auth::guard('admin')->check();
+        return true;
     }
 
     public function rules(): array
@@ -21,8 +23,8 @@ class CouponRequest extends FormRequest
             'expired_date' => ['required', 'date'],
             'minimum_order_amount' => ['nullable', 'numeric'],
             'usage_limit' => ['nullable', 'numeric'],
-            'type' => ['nullable', 'string'],
-            'status' => ['nullable', 'string'],
+            'type' => ['nullable', 'string', Rule::in(array_column(CouponTypeEnum::cases(), 'value'))],
+            'status' => ['nullable', 'string', Rule::in(array_column(CouponStatusEnum::cases(), 'value'))],
         ];
     }
 }

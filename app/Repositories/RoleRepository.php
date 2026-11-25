@@ -2,6 +2,8 @@
 
 namespace App\Repositories;
 
+use Arafat\LaravelRepository\Repository;
+
 use App\Models\Admin;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
@@ -12,7 +14,7 @@ use Spatie\Permission\Models\Role;
  * Spatie roles/permissions for the admin area, plus the admin-role
  * assignment screens (admins are App\Models\Admin rows).
  */
-class RoleRepository
+class RoleRepository extends Repository
 {
     public static function model()
     {
@@ -71,11 +73,6 @@ class RoleRepository
         }
 
         return false;
-    }
-
-    public static function delete(Role $role): bool
-    {
-        return (bool) $role->delete();
     }
 
     public static function activeAdmins()

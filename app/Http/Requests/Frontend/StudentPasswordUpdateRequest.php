@@ -6,6 +6,11 @@ use Illuminate\Foundation\Http\FormRequest;
 
 class StudentPasswordUpdateRequest extends FormRequest
 {
+    public function authorize(): bool
+    {
+        return true;
+    }
+
     function __construct()
     {
         setFormTabStep('profile_tab', 'password');

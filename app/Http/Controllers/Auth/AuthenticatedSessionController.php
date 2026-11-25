@@ -2,19 +2,24 @@
 
 namespace App\Http\Controllers\Auth;
 
-use App\Enums\UserBannedEnum;
-use App\Enums\UserRoleEnum;
-use App\Enums\UserStatusEnum;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\StudentLoginRequest;
 use App\Repositories\UserRepository;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
+/**
+ * Student / instructor login (allSolution AuthController shape:
+ * validate → find user → auth()->validate() → status check → login →
+ * regenerate → redirect()->intended()).
+ *
+ * Status / role / banned are compared as plain strings (spec §5: no
+ * enum casts). The BackedEnum unwrap keeps the checks correct while
+ * the model still casts those columns to enums.
+ */
 class AuthenticatedSessionController extends Controller
 {
     /**
@@ -30,61 +35,52 @@ class AuthenticatedSessionController extends Controller
      */
     public function store(StudentLoginRequest $request): RedirectResponse
     {
-        $credential = [
-            'email' => $request->email,
-            'password' => $request->password,
-        ];
+        $credentials = $request->validated();
 
-        $user = UserRepository::findByEmail($request->email);
+        $user = UserRepository::findByEmail($credentials['email']);
 
-        // Check if user exists and password match
-        if (! $user || ! Hash::check($request->password, $user->password)) {
-            $notification = __('Invalid credentials please check your email and password');
-            throw ValidationException::withMessages(['email' => $notification]);
+        if (! $user || ! auth('web')->validate($credentials)) {
+            throw ValidationException::withMessages([
+                'email' => __('Invalid credentials please check your email and password'),
+            ]);
         }
 
-        // Check if user active
-        if ($user->status !== UserStatusEnum::ACTIVE) {
-            $notification = __('Inactive account');
-            throw ValidationException::withMessages(['email' => $notification]);
+        $status = $user->status instanceof \BackedEnum ? $user->status->value : $user->status;
+
+        if ($status !== 'active') {
+            throw ValidationException::withMessages(['email' => __('Inactive account')]);
         }
 
-        // Check if user is banned
-        if ($user->is_banned === UserBannedEnum::YES) {
-            $notification = __('Your account has been banned');
-            $notification = ['messege' => $notification, 'alert-type' => 'error'];
+        $isBanned = $user->is_banned instanceof \BackedEnum ? $user->is_banned->value : $user->is_banned;
 
-            return redirect()->back()->with($notification);
+        if ($isBanned === 'yes') {
+            return redirect()->back()->with([
+                'messege' => __('Your account has been banned'),
+                'alert-type' => 'error',
+            ]);
         }
 
-        // Check if email is verified
         if (! $user->email_verified_at) {
-            $notification = __('Please verify your email');
-            $notification = ['messege' => $notification, 'alert-type' => 'error'];
-
-            return redirect()->back()->with($notification);
+            return redirect()->back()->with([
+                'messege' => __('Please verify your email'),
+                'alert-type' => 'error',
+            ]);
         }
 
-        // Authenticate user
-        Auth::guard('web')->attempt($credential, $request->remember);
+        auth('web')->login($user, $request->boolean('remember'));
+        $request->session()->regenerate();
 
-        // Redirect user to dashboard based on role
-        $notification = __('Logged in successfully.');
-        $notification = ['messege' => $notification, 'alert-type' => 'success'];
-
-        $intendedUrl = session()->get('url.intended');
-        if ($intendedUrl && \Str::contains($intendedUrl, '/admin')) {
-            if ($user->role === UserRoleEnum::INSTRUCTOR) {
-                return redirect()->route('instructor.dashboard');
-            }
-
-            return redirect()->route('student.dashboard');
+        // The old users table has no last_login_at column, so this is
+        // recorded only when the column exists (never breaks login).
+        if (Schema::hasColumn('users', 'last_login_at')) {
+            $user->forceFill(['last_login_at' => now()])->save();
         }
+
+        $role = $user->role instanceof \BackedEnum ? $user->role->value : $user->role;
 
         return redirect()->intended(
-            $user->role === UserRoleEnum::INSTRUCTOR ?
-                route('instructor.dashboard') : route('student.dashboard')
-        )->with($notification);
+            $role === 'instructor' ? route('instructor.dashboard') : route('student.dashboard')
+        )->with('success', __('Logged in successfully.'));
     }
 
     /**
@@ -92,11 +88,10 @@ class AuthenticatedSessionController extends Controller
      */
     public function destroy(Request $request): RedirectResponse
     {
-        Auth::guard('web')->logout();
+        auth('web')->logout();
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
 
-        $notification = __('Logged out successfully.');
-        $notification = ['messege' => $notification, 'alert-type' => 'success'];
-
-        return redirect()->route('login')->with($notification);
+        return redirect()->route('login')->with('success', __('Logged out successfully.'));
     }
 }

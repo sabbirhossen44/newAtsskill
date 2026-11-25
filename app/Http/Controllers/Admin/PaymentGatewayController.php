@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Http\Controllers\Concerns\ChecksAdminPermissions;
 use App\Models\MultiCurrency;
 use App\Models\PaymentGateway;
 use Illuminate\Http\Request;
@@ -18,11 +17,8 @@ use Illuminate\Http\Request;
  */
 class PaymentGatewayController extends Controller
 {
-    use ChecksAdminPermissions;
-
     public function paymentgateway()
     {
-        $this->checkAdminPermission('payment.view');
         $values = PaymentGateway::query()->pluck('value', 'key')->all();
         $currencies = MultiCurrency::get();
         $payment_setting = (object) $values;
@@ -55,12 +51,11 @@ class PaymentGatewayController extends Controller
 
     protected function done()
     {
-        return redirect()->back()->with(['messege' => __('Update Successfully'), 'alert-type' => 'success']);
+        return redirect()->back()->with('success', __('Update Successfully'));
     }
 
     public function razorpay_update(Request $request)
     {
-        $this->checkAdminPermission('payment.update');
         $this->saveGateway($request, 'razorpay', ['razorpay_key', 'razorpay_secret', 'razorpay_charge', 'razorpay_status', 'razorpay_name', 'razorpay_description', 'razorpay_theme_color']);
 
         return $this->done();
@@ -68,7 +63,6 @@ class PaymentGatewayController extends Controller
 
     public function flutterwave_update(Request $request)
     {
-        $this->checkAdminPermission('payment.update');
         $this->saveGateway($request, 'flutterwave', ['flutterwave_public_key', 'flutterwave_secret_key', 'flutterwave_charge', 'flutterwave_app_name', 'flutterwave_status']);
 
         return $this->done();
@@ -76,7 +70,6 @@ class PaymentGatewayController extends Controller
 
     public function paystack_update(Request $request)
     {
-        $this->checkAdminPermission('payment.update');
         $this->saveGateway($request, 'paystack', ['paystack_public_key', 'paystack_secret_key', 'paystack_charge', 'paystack_status']);
 
         return $this->done();
@@ -84,7 +77,6 @@ class PaymentGatewayController extends Controller
 
     public function mollie_update(Request $request)
     {
-        $this->checkAdminPermission('payment.update');
         $this->saveGateway($request, 'mollie', ['mollie_api_key', 'mollie_charge', 'mollie_status']);
 
         return $this->done();
@@ -92,7 +84,6 @@ class PaymentGatewayController extends Controller
 
     public function instamojo_update(Request $request)
     {
-        $this->checkAdminPermission('payment.update');
         $this->saveGateway($request, 'instamojo', ['instamojo_api_key', 'instamojo_auth_token', 'instamojo_charge', 'instamojo_status']);
 
         return $this->done();
@@ -100,7 +91,6 @@ class PaymentGatewayController extends Controller
 
     public function uddoktapay_update(Request $request)
     {
-        $this->checkAdminPermission('payment.update');
         $this->saveGateway($request, 'uddoktapay', ['uddoktapay_api_key', 'uddoktapay_charge', 'uddoktapay_status']);
 
         return $this->done();

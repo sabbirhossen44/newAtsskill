@@ -31,9 +31,6 @@ class NewPasswordController extends Controller
      */
     public function store(ResetPasswordRequest $request): RedirectResponse
     {
-        // Here we will attempt to reset the user's password. If it is successful we
-        // will update the password on an actual user model and persist it to the
-        // database. Otherwise we will parse the error and return the response.
         $status = Password::reset(
             $request->only('email', 'password', 'password_confirmation', 'token'),
             function ($user) use ($request) {
@@ -46,45 +43,42 @@ class NewPasswordController extends Controller
             }
         );
 
-        // If the password was successfully reset, we will redirect the user back to
-        // the application's home authenticated view. If there is an error we can
-        // redirect them back to where they came from with their error message.
         return $status == Password::PASSWORD_RESET
             ? redirect()->route('login')->with('status', __($status))
             : back()->withInput($request->only('email'))
                 ->withErrors(['email' => __($status)]);
     }
 
-    public function custom_reset_password_page(Request $request, $token)
+    public function custom_reset_password_page(Request $request, $token): View|RedirectResponse
     {
         $user = UserRepository::findByForgetPasswordToken($token);
 
         if (! $user) {
-            $notification = __('Invalid token, please try again');
-            $notification = ['messege' => $notification, 'alert-type' => 'error'];
-
-            return redirect()->route('password.request')->with($notification);
+            return redirect()->route('password.request')->with([
+                'messege' => __('Invalid token, please try again'),
+                'alert-type' => 'error',
+            ]);
         }
 
         return view('auth.reset-password', ['user' => $user, 'token' => $token]);
     }
 
-    public function custom_reset_password_store(CustomResetPasswordRequest $request, $token)
+    public function custom_reset_password_store(CustomResetPasswordRequest $request, $token): RedirectResponse
     {
         $user = UserRepository::findByForgetPasswordTokenAndEmail($token, $request->email);
 
         if (! $user) {
-            $notification = __('Invalid token, please try again');
-            $notification = ['messege' => $notification, 'alert-type' => 'error'];
-
-            return redirect()->back()->with($notification);
+            return redirect()->back()->with([
+                'messege' => __('Invalid token, please try again'),
+                'alert-type' => 'error',
+            ]);
         }
 
         UserRepository::resetCustomPassword($user, $request->password);
 
-        $notification = __('Password Reset successfully');
-        $notification = ['messege' => $notification, 'alert-type' => 'success'];
-
-        return redirect()->route('login')->with($notification);
+        return redirect()->route('login')->with([
+            'messege' => __('Password Reset successfully'),
+            'alert-type' => 'success',
+        ]);
     }
 }

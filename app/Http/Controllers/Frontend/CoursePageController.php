@@ -11,14 +11,14 @@ use Illuminate\View\View;
 
 class CoursePageController extends Controller
 {
-    function index(): View
+    public function index(): View
     {
         return view('frontend.pages.courses.index', CourseRepository::filterOptions());
     }
 
-    function fetchCourses(Request $request)
+    public function fetchCourses(Request $request)
     {
-        $courses = CourseRepository::paginateFiltered($request);
+        $courses = CourseRepository::paginateFiltered($request, $this->perPage($request));
 
         $lastPage = $courses->lastPage();
         $page = $request->page ?? 1;
@@ -41,7 +41,7 @@ class CoursePageController extends Controller
         return response()->json($data);
     }
 
-    function show(string $slug)
+    public function show(string $slug)
     {
         $course = CourseRepository::findBySlugWithDetailsOrFail($slug);
         $courseLessonCount = CourseRepository::lessonCount($course);
@@ -49,5 +49,18 @@ class CoursePageController extends Controller
         $reviews = CourseReviewRepository::paginateForCoursePage($course);
 
         return view('frontend.pages.courses.show', compact('course', 'courseLessonCount', 'courseQuizCount', 'reviews'));
+    }
+
+    /**
+     * Frontend listing page size. allSolution's admin perPage() whitelists
+     * [10, 25, 50, 100] with default 15; the public course listing has
+     * always shown 12 per page, so that size is kept here.
+     * Protected (not private) only because the base Controller still
+     * defines protected perPage(); flip to private perPage() once the
+     * base method is removed per spec section 1.
+     */
+    private function perPage(Request $request, int $default = 12): int
+    {
+        return $default;
     }
 }

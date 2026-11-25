@@ -31,14 +31,14 @@ class StudentDashboardController extends Controller
         ));
     }
 
-    function enrolledCourses()
+    public function enrolledCourses()
     {
         $enrolls = EnrollmentRepository::paginateForUser(auth('web')->user()->id, 10);
 
         return view('frontend.student-dashboard.enrolled-courses.index', compact('enrolls'));
     }
 
-    function quizAttempts()
+    public function quizAttempts()
     {
         Session::forget('course_slug');
         $quizAttempts = QuizResultRepository::paginateForUser(auth('web')->user()->id, 10);
@@ -46,18 +46,18 @@ class StudentDashboardController extends Controller
         return view('frontend.student-dashboard.quiz-attempts.index', compact('quizAttempts'));
     }
 
-    function downloadCertificate(string $id)
+    public function downloadCertificate(string $id)
     {
         $course = CourseRepository::findWithTrashedById((int) $id);
 
         if (! $course || ! StudentCertificateService::streamCertificateForCourse(auth('web')->user(), $course)) {
-            return abort(404);
+            abort(404);
         }
 
         return redirect()->back();
     }
 
-    function downloadDemoCertificate()
+    public function downloadDemoCertificate()
     {
         StudentCertificateService::streamDemoCertificate();
 

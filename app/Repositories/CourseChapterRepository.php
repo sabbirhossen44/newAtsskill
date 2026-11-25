@@ -2,6 +2,8 @@
 
 namespace App\Repositories;
 
+use Arafat\LaravelRepository\Repository;
+
 use App\Models\CourseChapter;
 use App\Models\CourseChapterItem;
 use App\Models\CourseChapterLesson;
@@ -9,7 +11,7 @@ use App\Models\Quiz;
 use App\Models\QuizQuestion;
 use Illuminate\Database\Eloquent\Collection;
 
-class CourseChapterRepository
+class CourseChapterRepository extends Repository
 {
     public static function model()
     {
@@ -18,12 +20,12 @@ class CourseChapterRepository
 
     public static function findById(string $id): ?CourseChapter
     {
-        return static::model()::query()->find($id);
+        return self::find($id);
     }
 
     public static function findByIdOrFail(string $id): CourseChapter
     {
-        return static::model()::query()->findOrFail($id);
+        return self::findOrFail($id);
     }
 
     public static function orderedForCourse(string $courseId): Collection
@@ -41,7 +43,7 @@ class CourseChapterRepository
     {
         $data['order'] = static::model()::query()->where('course_id', $data['course_id'])->max('order') + 1;
 
-        return static::model()::query()->create($data);
+        return self::create($data);
     }
 
     public static function updateTitle(CourseChapter $chapter, ?string $title): bool

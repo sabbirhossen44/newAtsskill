@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Enums\OrderItemTypeEnum;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -16,7 +15,6 @@ class OrderItem extends Model
     protected function casts(): array
     {
         return [
-            'item_type' => \App\Enums\OrderItemTypeEnum::class,
             'price' => 'double',
         ];
     }

@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Http\Controllers\Concerns\ChecksAdminPermissions;
 use App\Models\EmailTemplate;
 use App\Services\SettingService;
 use Illuminate\Http\Request;
@@ -17,11 +16,8 @@ use Illuminate\Support\Facades\Mail;
  */
 class EmailSettingController extends Controller
 {
-    use ChecksAdminPermissions;
-
     public function email_config()
     {
-        $this->checkAdminPermission('setting.view');
         $templates = EmailTemplate::all();
         $emailConfig = (object) SettingService::all();
 
@@ -30,7 +26,6 @@ class EmailSettingController extends Controller
 
     public function update_email_config(Request $request)
     {
-        $this->checkAdminPermission('setting.update');
         $request->validate([
             'mail_driver' => 'nullable|string',
             'mail_host' => 'nullable|string',
@@ -51,12 +46,11 @@ class EmailSettingController extends Controller
             }
         }
 
-        return redirect()->back()->with(['messege' => __('Update Successfully'), 'alert-type' => 'success']);
+        return redirect()->back()->with('success', __('Update Successfully'));
     }
 
     public function edit_email_template($id)
     {
-        $this->checkAdminPermission('setting.view');
         $template = EmailTemplate::findOrFail($id);
 
         $map = [
@@ -79,7 +73,7 @@ class EmailSettingController extends Controller
 
         $view = $map[$template->name] ?? null;
         if (! $view || ! view()->exists('admin.global-setting.email.template.'.$view)) {
-            return redirect()->back()->with(['messege' => __('Something went wrong'), 'alert-type' => 'error']);
+            return redirect()->back()->with('error', __('Something went wrong'));
         }
 
         return view('admin.global-setting.email.template.'.$view, compact('template'));
@@ -87,7 +81,6 @@ class EmailSettingController extends Controller
 
     public function update_email_template(Request $request, $id)
     {
-        $this->checkAdminPermission('setting.update');
         $request->validate([
             'subject' => 'required|string',
             'message' => 'required|string',
@@ -95,28 +88,26 @@ class EmailSettingController extends Controller
 
         $template = EmailTemplate::find($id);
         if (! $template) {
-            return redirect()->back()->with(['messege' => __('Something went wrong'), 'alert-type' => 'error']);
+            return redirect()->back()->with('error', __('Something went wrong'));
         }
 
         $template->subject = $request->subject;
         $template->message = $request->message;
         $template->save();
 
-        return redirect()->route('admin.email-configuration')->with(['messege' => __('Updated Successfully'), 'alert-type' => 'success']);
+        return redirect()->route('admin.email-configuration')->with('success', __('Updated Successfully'));
     }
 
     public function test_mail_credentials()
     {
-        $this->checkAdminPermission('setting.view');
-
         try {
             Mail::raw('This is a test email', function ($message) {
                 $message->to('info@atsskill.com')->subject('Test Email');
             });
 
-            return redirect()->back()->with(['messege' => __('Mail Send Successfully'), 'alert-type' => 'success']);
+            return redirect()->back()->with('success', __('Mail Send Successfully'));
         } catch (\Throwable) {
-            return redirect()->back()->with(['messege' => __('Invalid Mail Credentials'), 'alert-type' => 'error']);
+            return redirect()->back()->with('error', __('Invalid Mail Credentials'));
         }
     }
 }

@@ -2,6 +2,8 @@
 
 namespace App\Repositories;
 
+use Arafat\LaravelRepository\Repository;
+
 use Illuminate\Support\Facades\Schema;
 
 use App\Models\Blog;
@@ -11,7 +13,7 @@ use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 
-class BlogRepository
+class BlogRepository extends Repository
 {
     public static function model()
     {
@@ -34,7 +36,7 @@ class BlogRepository
         unset($data['translations']);
 
         $data['slug'] = Blog::generateUniqueSlug($translations['en']['title'] ?? $data['slug'] ?? \Illuminate\Support\Str::random(8));
-        $record = static::model()::query()->create($data);
+        $record = self::create($data);
 
         if (! empty($translations) && is_array($translations)) {
             TranslationService::sync($record, 'translations', $translations);
@@ -48,7 +50,7 @@ class BlogRepository
         $translations = $data['translations'] ?? null;
         unset($data['translations']);
 
-        $updated = $record->update($data);
+        $updated = self::update($record, $data);
 
         if (! empty($translations) && is_array($translations)) {
             TranslationService::sync($record, 'translations', $translations);
@@ -57,21 +59,25 @@ class BlogRepository
         return $updated;
     }
 
-    public static function delete(Blog $record): bool
+    public static function delete(mixed $record): bool
     {
-        return (bool) $record->delete();
+        if ($record instanceof \Illuminate\Database\Eloquent\Model) {
+            return (bool) $record->delete();
+        }
+
+        return (bool) parent::delete($record);
     }
 
     /**
      * Public blog listing (cached 1h; cache key includes the search,
      * category and page, exactly as the old BlogController built it).
      */
-    public static function paginateForIndex(?string $search, ?string $categorySlug, int $page = 1): LengthAwarePaginator
+    public static function paginateForIndex(?string $search, ?string $categorySlug, int $page = 1, int $perPage = 9): LengthAwarePaginator
     {
         $cacheDuration = 3600;
-        $cacheKey = 'blog_index_'.md5($search.'_'.$categorySlug.'_page_'.$page);
+        $cacheKey = 'blog_index_'.md5($search.'_'.$categorySlug.'_page_'.$page.'_per_page_'.$perPage);
 
-        return Cache::remember($cacheKey, $cacheDuration, function () use ($search, $categorySlug) {
+        return Cache::remember($cacheKey, $cacheDuration, function () use ($search, $categorySlug, $perPage) {
             $query = static::model()::query();
 
             $query->when($search, function ($query) use ($search) {
@@ -89,7 +95,7 @@ class BlogRepository
 
             $query->whereHas('category', function ($q) { $q->where('status', 1); });
 
-            return $query->where(['status' => 1])->orderBy('created_at', 'desc')->paginate(9);
+            return $query->where(['status' => 1])->orderBy('created_at', 'desc')->paginate($perPage)->withQueryString();
         });
     }
 

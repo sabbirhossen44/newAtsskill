@@ -8,7 +8,7 @@ class AssignRoleRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true; // auth is enforced by the admin permission check in the controller
+        return true;
     }
 
     public function rules(): array

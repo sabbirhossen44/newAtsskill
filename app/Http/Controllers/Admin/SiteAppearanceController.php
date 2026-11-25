@@ -3,9 +3,6 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Http\Controllers\Concerns\ChecksAdminPermissions;
-use App\Http\Controllers\Concerns\RedirectsWithMessage;
-use App\Enums\RedirectTypeEnum;
 use App\Models\Setting;
 use App\Services\SettingService;
 use Illuminate\Http\Request;
@@ -19,14 +16,10 @@ use Illuminate\Pagination\Paginator;
  */
 class SiteAppearanceController extends Controller
 {
-    use ChecksAdminPermissions;
-    use RedirectsWithMessage;
-
     protected array $keys = ['site_theme', 'show_all_homepage'];
 
     public function index(Request $request)
     {
-        $this->checkAdminPermission('appearance.management');
         Paginator::useBootstrap();
         $items = Setting::query()->whereIn('key', $this->keys)->latest()->paginate($this->perPage($request));
 
@@ -35,23 +28,19 @@ class SiteAppearanceController extends Controller
 
     public function create()
     {
-        $this->checkAdminPermission('appearance.management');
-
         return view('admin.site-appearance.create');
     }
 
     public function store(Request $request)
     {
-        $this->checkAdminPermission('appearance.management');
         $request->validate(['name' => 'required|string|max:255', 'value' => 'nullable|string']);
         SettingService::set($request->input('name'), $request->input('value', ''));
 
-        return $this->redirectWithMessage(RedirectTypeEnum::CREATE->value, 'admin.site-appearance.index');
+        return redirect()->route('admin.site-appearance.index')->with('success', 'Site appearance created successfully.');
     }
 
     public function edit($id)
     {
-        $this->checkAdminPermission('appearance.management');
         $item = Setting::findOrFail($id);
 
         return view('admin.site-appearance.edit', ['item' => $item]);
@@ -59,7 +48,6 @@ class SiteAppearanceController extends Controller
 
     public function update(Request $request, $id)
     {
-        $this->checkAdminPermission('appearance.management');
         $request->validate(['theme' => 'nullable|string', 'value' => 'nullable|string', 'name' => 'nullable|string']);
         $item = Setting::findOrFail($id);
         if ($request->filled('theme')) {
@@ -71,14 +59,20 @@ class SiteAppearanceController extends Controller
         ]);
         SettingService::forgetCache();
 
-        return $this->redirectWithMessage(RedirectTypeEnum::UPDATE->value, 'admin.site-appearance.index');
+        return redirect()->route('admin.site-appearance.index')->with('success', 'Site appearance updated successfully.');
     }
 
     public function destroy($id)
     {
-        $this->checkAdminPermission('appearance.management');
         Setting::findOrFail($id)->delete();
 
-        return $this->redirectWithMessage(RedirectTypeEnum::DELETE->value, 'admin.site-appearance.index');
+        return redirect()->route('admin.site-appearance.index')->with('success', 'Site appearance deleted successfully.');
+    }
+
+    private function perPage(Request $request): int
+    {
+        $perPage = (int) $request->input('per_page', 15);
+
+        return in_array($perPage, [10, 25, 50, 100], true) ? $perPage : 15;
     }
 }

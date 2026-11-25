@@ -2,14 +2,21 @@
 
 namespace App\Repositories;
 
+use Arafat\LaravelRepository\Repository;
+
 use App\Models\City;
 use App\Models\Country;
 use App\Models\State;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Cache;
 
-class LocationRepository
+class LocationRepository extends Repository
 {
+    public static function model()
+    {
+        return Country::class;
+    }
+
     /**
      * Homepage location dropdowns (no status filter, exactly as the old
      * HomePageController queried them). statesForCountry()/citiesForState()

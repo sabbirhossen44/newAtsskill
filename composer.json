@@ -40,6 +40,8 @@
   "name": "sabbirhossen44/newatsskill",
   "prefer-stable": true,
   "require": {
+    "php": "^8.3",
+    "arafatdev/laravel-repository": "^3.1",
     "dompdf/dompdf": "^3.0",
     "guzzlehttp/guzzle": "^7.8",
     "intervention/image": "^3.0",
@@ -48,7 +50,6 @@
     "laravel/sanctum": "^4.0",
     "laravel/socialite": "^5.0",
     "laravel/tinker": "^3.0",
-    "php": "^8.3",
     "pusher/pusher-php-server": "^7.0",
     "razorpay/razorpay": "^2.0",
     "spatie/laravel-permission": "^6.0",

@@ -2,9 +2,6 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Enums\RedirectTypeEnum;
-use App\Http\Controllers\Concerns\ChecksAdminPermissions;
-use App\Http\Controllers\Concerns\RedirectsWithMessage;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\CourseReviewRequest;
 use App\Repositories\CourseReviewRepository;
@@ -13,12 +10,8 @@ use Illuminate\Pagination\Paginator;
 
 class CourseReviewController extends Controller
 {
-    use ChecksAdminPermissions;
-    use RedirectsWithMessage;
-
     public function index(Request $request)
     {
-        $this->checkAdminPermission('course.management');
         Paginator::useBootstrap();
         $reviews = CourseReviewRepository::paginateAdmin($request->input('keyword') ?? $request->input('search'), $this->perPage($request));
         return view('admin.course-review.index', ['reviews' => $reviews, 'items' => $reviews]);
@@ -26,7 +19,6 @@ class CourseReviewController extends Controller
 
     public function show($id)
     {
-        $this->checkAdminPermission('course.management');
         $item = CourseReviewRepository::findByIdOrFail($id);
 
         return view('admin.course-review.show', ['item' => $item, 'review' => $item]);
@@ -34,14 +26,12 @@ class CourseReviewController extends Controller
 
     public function edit($id)
     {
-        $this->checkAdminPermission('course.management');
         $item = CourseReviewRepository::findByIdOrFail($id);
         return view('admin.course-review.edit', ['item' => $item, 'review' => $item]);
     }
 
     public function update(CourseReviewRequest $request, $id)
     {
-        $this->checkAdminPermission('course.management');
         $item = CourseReviewRepository::findByIdOrFail($id);
         $data = $request->validated();
         $data['review'] = $data['comment'] ?? $data['review'] ?? null;
@@ -49,16 +39,22 @@ class CourseReviewController extends Controller
 
         CourseReviewRepository::updateByRequest($item, $data);
 
-        return $this->redirectWithMessage(RedirectTypeEnum::UPDATE->value, 'admin.course-review.index');
+        return redirect()->route('admin.course-review.index')->with('success', 'Course review updated successfully.');
     }
 
     public function destroy($id)
     {
-        $this->checkAdminPermission('course.management');
         $item = CourseReviewRepository::findByIdOrFail($id);
 
-        CourseReviewRepository::delete($item);
+        $item->delete();
 
-        return $this->redirectWithMessage(RedirectTypeEnum::DELETE->value, 'admin.course-review.index');
+        return redirect()->route('admin.course-review.index')->with('success', 'Course review deleted successfully.');
+    }
+
+    private function perPage(Request $request): int
+    {
+        $perPage = (int) $request->input('per_page', 15);
+
+        return in_array($perPage, [10, 25, 50, 100], true) ? $perPage : 15;
     }
 }

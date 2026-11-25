@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Admin;
 use App\Enums\OrderStatusEnum;
 use App\Enums\PaymentStatusEnum;
 use App\Http\Controllers\Controller;
-use App\Http\Controllers\Concerns\ChecksAdminPermissions;
 use App\Models\Course;
 use App\Models\Enrollment;
 use App\Repositories\OrderRepository;
@@ -21,11 +20,8 @@ use Illuminate\Pagination\Paginator;
  */
 class OrderController extends Controller
 {
-    use ChecksAdminPermissions;
-
     public function index(Request $request)
     {
-        $this->checkAdminPermission('order.management');
         Paginator::useBootstrap();
         $orders = OrderRepository::paginateAdminOrders($request->input('keyword'), $this->perPage($request));
 
@@ -34,7 +30,6 @@ class OrderController extends Controller
 
     public function pending_order()
     {
-        $this->checkAdminPermission('order.management');
         Paginator::useBootstrap();
         $orders = OrderRepository::paginatePendingOrders($this->perPage(request()));
 
@@ -43,7 +38,6 @@ class OrderController extends Controller
 
     public function show($id)
     {
-        $this->checkAdminPermission('order.management');
         $order = OrderRepository::findAdminOrFail($id);
 
         return view('admin.order.show', ['order' => $order]);
@@ -51,7 +45,6 @@ class OrderController extends Controller
 
     public function updateOrder(Request $request, $id)
     {
-        $this->checkAdminPermission('order.management');
         $order = OrderRepository::findByIdOrFail($id);
 
         OrderRepository::updateAdminOrder($order, [
@@ -78,7 +71,7 @@ class OrderController extends Controller
             }
         }
 
-        return redirect()->back()->with(['messege' => __('order status updated successfully'), 'alert-type' => 'success']);
+        return redirect()->back()->with('success', __('order status updated successfully'));
     }
 
     public function printInvoice(Request $request, $id)
@@ -90,7 +83,6 @@ class OrderController extends Controller
 
     public function destroy($id)
     {
-        $this->checkAdminPermission('order.management');
         $order = OrderRepository::findByIdOrFail($id);
 
         if ($order->payment_status === PaymentStatusEnum::PAID) {
@@ -104,6 +96,13 @@ class OrderController extends Controller
         $order->orderItems()->delete();
         $order->delete();
 
-        return redirect()->route('admin.orders')->with(['messege' => __('Order deleted successfully'), 'alert-type' => 'success']);
+        return redirect()->route('admin.orders')->with('success', __('Order deleted successfully'));
+    }
+
+    private function perPage(Request $request): int
+    {
+        $perPage = (int) $request->input('per_page', 15);
+
+        return in_array($perPage, [10, 25, 50, 100], true) ? $perPage : 15;
     }
 }

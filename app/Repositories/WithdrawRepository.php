@@ -2,6 +2,8 @@
 
 namespace App\Repositories;
 
+use Arafat\LaravelRepository\Repository;
+
 use App\Services\TranslationService;
 
 use Illuminate\Support\Facades\Schema;
@@ -14,7 +16,7 @@ use App\Models\OrderItem;
 use App\Models\WithdrawMethod;
 use App\Models\WithdrawRequest;
 
-class WithdrawRepository
+class WithdrawRepository extends Repository
 {
     public static function model()
     {
@@ -125,12 +127,16 @@ class WithdrawRepository
 
     public static function findByIdOrFail(int $id): mixed
     {
-        return static::model()::query()->findOrFail($id);
+        return self::findOrFail($id);
     }
 
     public static function delete(mixed $record): bool
     {
-        return (bool) $record->delete();
+        if ($record instanceof \Illuminate\Database\Eloquent\Model) {
+            return (bool) $record->delete();
+        }
+
+        return (bool) static::query()->destroy($record);
     }
 
     public static function toggleStatus(mixed $record): bool
@@ -224,7 +230,7 @@ class WithdrawRepository
     {
         [$direct, $translations] = static::splitAdminData($data);
 
-        $record = static::model()::query()->create($direct);
+        $record = self::create($direct);
         static::syncAdminTranslations($record, $translations);
 
         return $record->fresh();

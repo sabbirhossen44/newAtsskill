@@ -2,7 +2,6 @@
 
 namespace App\Services;
 
-use App\Enums\LiveClassTypeEnum;
 use App\Models\Course;
 use App\Models\CourseChapterLesson;
 use App\Models\JitsiSetting;
@@ -165,7 +164,9 @@ class LearningService
     {
         $lesson = LearningRepository::liveLesson($lessonId);
 
-        if ($lesson->live->type === LiveClassTypeEnum::ZOOM) {
+        // Compare the raw attribute: the model casts `type` to an enum,
+        // so $lesson->live->type is an enum instance, not the string 'zoom'.
+        if (($lesson->live->getAttributes()['type'] ?? $lesson->live->type) === 'zoom') {
             return ['type' => 'zoom', 'lesson' => $lesson];
         }
 

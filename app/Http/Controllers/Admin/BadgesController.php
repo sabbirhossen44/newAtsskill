@@ -2,9 +2,6 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Enums\RedirectTypeEnum;
-use App\Http\Controllers\Concerns\ChecksAdminPermissions;
-use App\Http\Controllers\Concerns\RedirectsWithMessage;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\BadgeRequest;
 use App\Repositories\BadgeRepository;
@@ -14,12 +11,8 @@ use Illuminate\Pagination\Paginator;
 
 class BadgesController extends Controller
 {
-    use ChecksAdminPermissions;
-    use RedirectsWithMessage;
-
     public function index(Request $request)
     {
-        $this->checkAdminPermission('badge.management');
         Paginator::useBootstrap();
         $badges = BadgeRepository::paginateAdmin($request->input('keyword') ?? $request->input('search'), $this->perPage($request));
         return view('admin.badges.index', ['badges' => $badges, 'items' => $badges]);
@@ -27,13 +20,11 @@ class BadgesController extends Controller
 
     public function create()
     {
-        $this->checkAdminPermission('badge.management');
         return view('admin.badges.create', []);
     }
 
     public function store(BadgeRequest $request)
     {
-        $this->checkAdminPermission('badge.management');
         $data = $request->validated();
         $data['name'] = $data['title'] ?? $data['name'] ?? null;
                 $data['key'] = $data['key'] ?? \Illuminate\Support\Str::slug($data['name'] ?? 'badge');
@@ -47,19 +38,17 @@ class BadgesController extends Controller
 
         BadgeRepository::storeByRequest($data);
 
-        return $this->redirectWithMessage(RedirectTypeEnum::CREATE->value, 'admin.badges.index');
+        return redirect()->route('admin.badges.index')->with('success', 'Badge created successfully.');
     }
 
     public function edit($id)
     {
-        $this->checkAdminPermission('badge.management');
         $item = BadgeRepository::findByIdOrFail($id);
         return view('admin.badges.edit', ['item' => $item, 'badge' => $item]);
     }
 
     public function update(BadgeRequest $request, $id)
     {
-        $this->checkAdminPermission('badge.management');
         $item = BadgeRepository::findByIdOrFail($id);
         $data = $request->validated();
         $data['name'] = $data['title'] ?? $data['name'] ?? null;
@@ -71,16 +60,22 @@ class BadgesController extends Controller
 
         BadgeRepository::updateByRequest($item, $data);
 
-        return $this->redirectWithMessage(RedirectTypeEnum::UPDATE->value, 'admin.badges.index');
+        return redirect()->route('admin.badges.index')->with('success', 'Badge updated successfully.');
     }
 
     public function destroy($id)
     {
-        $this->checkAdminPermission('badge.management');
         $item = BadgeRepository::findByIdOrFail($id);
 
-        BadgeRepository::delete($item);
+        $item->delete();
 
-        return $this->redirectWithMessage(RedirectTypeEnum::DELETE->value, 'admin.badges.index');
+        return redirect()->route('admin.badges.index')->with('success', 'Badge deleted successfully.');
+    }
+
+    private function perPage(Request $request): int
+    {
+        $perPage = (int) $request->input('per_page', 15);
+
+        return in_array($perPage, [10, 25, 50, 100], true) ? $perPage : 15;
     }
 }

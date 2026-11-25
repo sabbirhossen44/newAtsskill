@@ -29,8 +29,6 @@ class DashboardController extends Controller
         AdminDashboardService::setLanguage(request('code'));
 
         $notification = __('Language Changed Successfully');
-        $notification = ['messege' => $notification, 'alert-type' => 'success'];
-
-        return redirect()->back()->with($notification);
+        return redirect()->back()->with('success', $notification);
     }
 }

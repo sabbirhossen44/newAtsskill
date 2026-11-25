@@ -4,9 +4,6 @@ namespace App\Http\Controllers\Admin;
 
 use App\Enums\WithdrawStatusEnum;
 use App\Http\Controllers\Controller;
-use App\Http\Controllers\Concerns\ChecksAdminPermissions;
-use App\Http\Controllers\Concerns\RedirectsWithMessage;
-use App\Enums\RedirectTypeEnum;
 use App\Http\Requests\Admin\WithdrawMethodRequest;
 use App\Models\WithdrawRequest;
 use App\Repositories\WithdrawMethodRepository;
@@ -22,12 +19,8 @@ use Illuminate\Pagination\Paginator;
  */
 class WithdrawController extends Controller
 {
-    use ChecksAdminPermissions;
-    use RedirectsWithMessage;
-
     public function index(Request $request)
     {
-        $this->checkAdminPermission('withdraw.management');
         Paginator::useBootstrap();
         $methods = WithdrawMethodRepository::paginateAdmin($request->input('keyword'), $this->perPage($request));
 
@@ -36,26 +29,22 @@ class WithdrawController extends Controller
 
     public function create()
     {
-        $this->checkAdminPermission('withdraw.management');
-
         return view('admin.withdraw-method.create');
     }
 
     public function store(WithdrawMethodRequest $request)
     {
-        $this->checkAdminPermission('withdraw.management');
         $data = $request->validated();
         $data['min_amount'] = $data['minimum_amount'] ?? 0;
         $data['max_amount'] = $data['maximum_amount'] ?? $data['min_amount'];
         unset($data['minimum_amount'], $data['maximum_amount']);
         WithdrawMethodRepository::storeByRequest($data);
 
-        return $this->redirectWithMessage(RedirectTypeEnum::CREATE->value, 'admin.withdraw-method.index');
+        return redirect()->route('admin.withdraw-method.index')->with('success', 'Withdraw method created successfully.');
     }
 
     public function edit($id)
     {
-        $this->checkAdminPermission('withdraw.management');
         $item = WithdrawMethodRepository::findByIdOrFail((int) $id);
 
         return view('admin.withdraw-method.edit', ['item' => $item, 'method' => $item]);
@@ -63,7 +52,6 @@ class WithdrawController extends Controller
 
     public function update(WithdrawMethodRequest $request, $id)
     {
-        $this->checkAdminPermission('withdraw.management');
         $item = WithdrawMethodRepository::findByIdOrFail((int) $id);
         $data = $request->validated();
         $data['min_amount'] = $data['minimum_amount'] ?? 0;
@@ -71,21 +59,19 @@ class WithdrawController extends Controller
         unset($data['minimum_amount'], $data['maximum_amount']);
         WithdrawMethodRepository::updateByRequest($item, $data);
 
-        return $this->redirectWithMessage(RedirectTypeEnum::UPDATE->value, 'admin.withdraw-method.index');
+        return redirect()->route('admin.withdraw-method.index')->with('success', 'Withdraw method updated successfully.');
     }
 
     public function destroy($id)
     {
-        $this->checkAdminPermission('withdraw.management');
         $item = WithdrawMethodRepository::findByIdOrFail((int) $id);
-        WithdrawMethodRepository::delete($item);
+        $item->delete();
 
-        return $this->redirectWithMessage(RedirectTypeEnum::DELETE->value, 'admin.withdraw-method.index');
+        return redirect()->route('admin.withdraw-method.index')->with('success', 'Withdraw method deleted successfully.');
     }
 
     public function withdraw_list(Request $request)
     {
-        $this->checkAdminPermission('withdraw.management');
         Paginator::useBootstrap();
         $withdraws = WithdrawRequest::with(['user'])->latest()->paginate($this->perPage($request));
 
@@ -94,7 +80,6 @@ class WithdrawController extends Controller
 
     public function pending_withdraw_list(Request $request)
     {
-        $this->checkAdminPermission('withdraw.management');
         Paginator::useBootstrap();
         $withdraws = WithdrawRequest::with(['user'])->where('status', WithdrawStatusEnum::PENDING->value)->latest()->paginate($this->perPage($request));
 
@@ -103,7 +88,6 @@ class WithdrawController extends Controller
 
     public function show_withdraw($id)
     {
-        $this->checkAdminPermission('withdraw.management');
         $withdraw = WithdrawRequest::with(['user'])->findOrFail($id);
 
         return view('admin.withdraw.show', compact('withdraw'));
@@ -111,19 +95,24 @@ class WithdrawController extends Controller
 
     public function update_withdraw(Request $request, $id)
     {
-        $this->checkAdminPermission('withdraw.management');
         $withdraw = WithdrawRequest::findOrFail($id);
         $status = WithdrawStatusEnum::tryFrom((string) $request->input('status')) ?? $withdraw->status;
         $withdraw->update(['status' => $status]);
 
-        return redirect()->back()->with(['messege' => __('Updated Successfully'), 'alert-type' => 'success']);
+        return redirect()->back()->with('success', __('Updated Successfully'));
     }
 
     public function destroy_withdraw($id)
     {
-        $this->checkAdminPermission('withdraw.management');
         WithdrawRequest::findOrFail($id)->delete();
 
-        return redirect()->route('admin.withdraw-list')->with(['messege' => __('Deleted Successfully'), 'alert-type' => 'success']);
+        return redirect()->route('admin.withdraw-list')->with('success', __('Deleted Successfully'));
+    }
+
+    private function perPage(Request $request): int
+    {
+        $perPage = (int) $request->input('per_page', 15);
+
+        return in_array($perPage, [10, 25, 50, 100], true) ? $perPage : 15;
     }
 }

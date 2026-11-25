@@ -25,7 +25,7 @@ class EnsureAdminAuthenticated
 
         $admin = Auth::guard('admin')->user();
 
-        if ($admin && $admin->status !== UserStatusEnum::ACTIVE) {
+        if ($admin && $admin->status !== UserStatusEnum::ACTIVE->value) {
             Auth::guard('admin')->logout();
 
             return redirect()->route('admin.login')->with([

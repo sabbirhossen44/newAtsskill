@@ -2,6 +2,8 @@
 
 namespace App\Repositories;
 
+use Arafat\LaravelRepository\Repository;
+
 use Illuminate\Support\Facades\Schema;
 
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -13,7 +15,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 
-class CourseCategoryRepository
+class CourseCategoryRepository extends Repository
 {
     public static function model()
     {
@@ -39,7 +41,7 @@ class CourseCategoryRepository
         $translations = $data['translations'] ?? null;
         unset($data['translations']);
 
-        $category = static::model()::query()->create($data);
+        $category = self::create($data);
 
         if (! empty($translations)) {
             TranslationService::sync($category, 'translations', $translations);
@@ -57,7 +59,7 @@ class CourseCategoryRepository
         $translations = $data['translations'] ?? null;
         unset($data['translations']);
 
-        $updated = $category->update($data);
+        $updated = self::update($category, $data);
 
         if (! empty($translations)) {
             TranslationService::sync($category, 'translations', $translations);
@@ -127,11 +129,6 @@ class CourseCategoryRepository
     public static function findByIdOrFail(int $id): mixed
     {
         return static::model()::query()->findOrFail($id);
-    }
-
-    public static function delete(mixed $record): bool
-    {
-        return (bool) $record->delete();
     }
 
     public static function toggleStatus(mixed $record): bool
@@ -235,7 +232,7 @@ class CourseCategoryRepository
             $translations['en']['name'] ?? $data['slug'] ?? \Illuminate\Support\Str::random(8)
         );
 
-        $record = static::model()::query()->create($direct);
+        $record = self::create($direct);
         static::syncAdminTranslations($record, $translations);
 
         return $record->fresh();

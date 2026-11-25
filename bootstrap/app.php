@@ -3,7 +3,9 @@
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\Exceptions\PostTooLargeException;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Route;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -12,13 +14,14 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
         then: function () {
-            // admin.php / auth.php are loaded here (not via the stock
-            // web/api files), so give them the 'web' middleware group
-            // explicitly — otherwise session/errors/CSRF do not run.
-            \Illuminate\Support\Facades\Route::middleware('web')->group(function () {
-                require __DIR__.'/../routes/admin.php';
-                require __DIR__.'/../routes/auth.php';
-            });
+            // Verbatim allSolution shape: admin.php is loaded under the
+            // 'web' middleware with the 'admin' prefix applied here
+            // (routes/admin.php itself only adds the 'admin.' name).
+            Route::middleware('web')->prefix('admin')->group(base_path('routes/admin.php'));
+            // allSolution has no auth.php; the build's student auth routes
+            // must keep working, so they are loaded here in the web group
+            // exactly as before.
+            Route::middleware('web')->group(base_path('routes/auth.php'));
         },
     )
     ->withMiddleware(function (Middleware $middleware): void {
@@ -44,4 +47,12 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*') || $request->expectsJson(),
         );
+        $exceptions->render(function (PostTooLargeException $e, Request $request) {
+            if ($request->is('api/*') || $request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'The file is too large to upload. Please choose a smaller file and try again.',
+                ], 413);
+            }
+        });
     })->create();

@@ -2,11 +2,17 @@
 
 namespace App\Http\Requests\Frontend;
 
+use App\Enums\LandingPageStatusEnum;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 class LandingPageRequest extends FormRequest
 {
+    public function authorize(): bool
+    {
+        return true;
+    }
+
     public function rules(): array
     {
         $landingPage = $this->route('landing_page');
@@ -16,7 +22,7 @@ class LandingPageRequest extends FormRequest
             'slug' => ['required', Rule::unique('landing_pages', 'slug')->ignore($landingPage?->id)],
             'seo_title' => ['nullable'],
             'seo_description' => ['nullable'],
-            'status' => ['nullable'],
+            'status' => ['nullable', Rule::in(array_column(LandingPageStatusEnum::cases(), 'value'))],
             // Content fields: unvalidated passthrough in the old controller,
             // listed here as nullable so validated() carries them through.
             'hero_title' => ['nullable'],

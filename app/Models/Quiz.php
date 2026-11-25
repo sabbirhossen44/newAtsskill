@@ -15,12 +15,6 @@ class Quiz extends Model
 
     protected $guarded = ['id'];
 
-    protected function casts(): array
-    {
-        return [
-            'status' => \App\Enums\ChapterStatusEnum::class,
-        ];
-    }
 
     public function chapterItem(): BelongsTo
     {

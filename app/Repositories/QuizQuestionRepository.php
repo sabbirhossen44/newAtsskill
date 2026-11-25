@@ -2,9 +2,11 @@
 
 namespace App\Repositories;
 
+use Arafat\LaravelRepository\Repository;
+
 use App\Models\QuizQuestion;
 
-class QuizQuestionRepository
+class QuizQuestionRepository extends Repository
 {
     public static function model()
     {
@@ -13,7 +15,7 @@ class QuizQuestionRepository
 
     public static function findByIdOrFail(string $id): QuizQuestion
     {
-        return static::model()::query()->findOrFail($id);
+        return self::findOrFail($id);
     }
 
     public static function storeByRequest(string $quizId, array $data): QuizQuestion

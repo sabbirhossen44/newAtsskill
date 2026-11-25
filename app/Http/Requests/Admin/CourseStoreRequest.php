@@ -5,9 +5,15 @@ namespace App\Http\Requests\Admin;
 use App\Rules\ValidateDiscountRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Validator;
+use Illuminate\Validation\Rule;
 
 class CourseStoreRequest extends FormRequest
 {
+    public function authorize(): bool
+    {
+        return true;
+    }
+
     /**
      * Get the validation rules that apply to the request.
      */
@@ -26,7 +32,7 @@ class CourseStoreRequest extends FormRequest
             'instructor' => ['required', 'numeric'],
         ];
 
-        if ($this->edit_mode == 0) $rules['slug'] = ['required', 'string', 'max:255', 'unique:courses,slug'];
+        if ($this->edit_mode == 0) $rules['slug'] = ['required', 'string', 'max:255', Rule::unique('courses', 'slug')->whereNull('deleted_at')];
 
         return $rules;
     }

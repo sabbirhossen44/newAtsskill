@@ -2,6 +2,8 @@
 
 namespace App\Repositories;
 
+use Arafat\LaravelRepository\Repository;
+
 use App\Services\TranslationService;
 
 use Illuminate\Support\Facades\Schema;
@@ -11,7 +13,7 @@ use Illuminate\Pagination\LengthAwarePaginator;
 use App\Models\ContactMessage;
 use App\Models\ContactSection;
 
-class ContactMessageRepository
+class ContactMessageRepository extends Repository
 {
     public static function model()
     {
@@ -25,7 +27,7 @@ class ContactMessageRepository
 
     public static function storeByRequest(array $data): ContactMessage
     {
-        return static::model()::query()->create([
+        return self::create([
             'name' => $data['name'],
             'email' => $data['email'],
             'subject' => $data['subject'],
@@ -54,11 +56,6 @@ class ContactMessageRepository
     public static function findByIdOrFail(int $id): mixed
     {
         return static::model()::query()->findOrFail($id);
-    }
-
-    public static function delete(mixed $record): bool
-    {
-        return (bool) $record->delete();
     }
 
     public static function toggleStatus(mixed $record): bool

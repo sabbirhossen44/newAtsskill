@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 
 class TeamMember extends Model
 {
@@ -34,6 +35,15 @@ class TeamMember extends Model
     public function primaryMedia(): HasOne
     {
         return $this->hasOne(TeamMemberMedia::class, 'team_member_id')->where('is_primary', true);
+    }
+
+    public function thumbnail(): Attribute
+    {
+        return Attribute::make(
+            get: fn () => $this->primaryMedia?->media
+                ? Media::resolveUrl($this->primaryMedia->media->src)
+                : (Media::resolveUrl($this->image) ?? asset('images/default.webp')),
+        );
     }
 
 }

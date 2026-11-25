@@ -29,9 +29,6 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
-            'role' => \App\Enums\UserRoleEnum::class,
-            'status' => \App\Enums\UserStatusEnum::class,
-            'is_banned' => \App\Enums\UserBannedEnum::class,
             'wallet_balance' => 'decimal:2',
         ];
     }
@@ -68,12 +65,12 @@ class User extends Authenticatable
 
     public function isInstructor(): bool
     {
-        return $this->role === UserRoleEnum::INSTRUCTOR;
+        return $this->role === UserRoleEnum::INSTRUCTOR->value;
     }
 
     public function isStudent(): bool
     {
-        return $this->role === UserRoleEnum::STUDENT;
+        return $this->role === UserRoleEnum::STUDENT->value;
     }
 
     public function media(): BelongsTo

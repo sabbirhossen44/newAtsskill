@@ -2,13 +2,20 @@
 
 namespace App\Repositories;
 
+use Arafat\LaravelRepository\Repository;
+
 use App\Models\JitsiSetting;
 use App\Models\User;
 use App\Models\ZoomCredential;
 use Illuminate\Http\UploadedFile;
 
-class LiveCredentialRepository
+class LiveCredentialRepository extends Repository
 {
+    public static function model()
+    {
+        return ZoomCredential::class;
+    }
+
     public static function zoomCredentialFor(User $user): ?ZoomCredential
     {
         return $user->zoom_credential;

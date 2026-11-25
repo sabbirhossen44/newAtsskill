@@ -3,9 +3,6 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Http\Controllers\Concerns\ChecksAdminPermissions;
-use App\Http\Controllers\Concerns\RedirectsWithMessage;
-use App\Enums\RedirectTypeEnum;
 use App\Models\SectionSetting;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -18,9 +15,6 @@ use Illuminate\Support\Collection;
  */
 class SectionSettingController extends Controller
 {
-    use ChecksAdminPermissions;
-    use RedirectsWithMessage;
-
     protected function flags(): array
     {
         return ['hero_section', 'top_category_section', 'brands_section', 'about_section',
@@ -47,7 +41,6 @@ class SectionSettingController extends Controller
 
     public function index()
     {
-        $this->checkAdminPermission('appearance.management');
         $items = $this->rows();
 
         return view('admin.section-setting.index', ['items' => $items]);
@@ -55,26 +48,22 @@ class SectionSettingController extends Controller
 
     public function create()
     {
-        $this->checkAdminPermission('appearance.management');
-
         return view('admin.section-setting.create');
     }
 
     public function store(Request $request)
     {
-        $this->checkAdminPermission('appearance.management');
         $request->validate(['name' => 'required|string|max:255']);
         $flag = $request->input('name');
         if (in_array($flag, $this->flags(), true)) {
             SectionSetting::updateOrCreate(['id' => 1], [$flag => $request->input('status') === 'active' ? 1 : 0]);
         }
 
-        return $this->redirectWithMessage(RedirectTypeEnum::CREATE->value, 'admin.section-setting.index');
+        return redirect()->route('admin.section-setting.index')->with('success', 'Section setting created successfully.');
     }
 
     public function edit($id)
     {
-        $this->checkAdminPermission('appearance.management');
         $item = $this->rows()->firstWhere('id', (int) $id) ?? abort(404);
 
         return view('admin.section-setting.edit', ['item' => $item]);
@@ -82,19 +71,17 @@ class SectionSettingController extends Controller
 
     public function update(Request $request, $id)
     {
-        $this->checkAdminPermission('appearance.management');
         $item = $this->rows()->firstWhere('id', (int) $id) ?? abort(404);
         SectionSetting::updateOrCreate(['id' => 1], [$item->name => $request->input('status') === 'active' || $request->boolean('value') ? 1 : 0]);
 
-        return $this->redirectWithMessage(RedirectTypeEnum::UPDATE->value, 'admin.section-setting.index');
+        return redirect()->route('admin.section-setting.index')->with('success', 'Section setting updated successfully.');
     }
 
     public function destroy($id)
     {
-        $this->checkAdminPermission('appearance.management');
         $item = $this->rows()->firstWhere('id', (int) $id) ?? abort(404);
         SectionSetting::updateOrCreate(['id' => 1], [$item->name => 0]);
 
-        return $this->redirectWithMessage(RedirectTypeEnum::DELETE->value, 'admin.section-setting.index');
+        return redirect()->route('admin.section-setting.index')->with('success', 'Section setting deleted successfully.');
     }
 }

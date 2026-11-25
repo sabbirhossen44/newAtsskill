@@ -2,12 +2,14 @@
 
 namespace App\Repositories;
 
+use Arafat\LaravelRepository\Repository;
+
 use App\Models\ContactSection;
 use App\Services\TranslationService;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Schema;
 
-class ContactSectionRepository
+class ContactSectionRepository extends Repository
 {
     public static function model()
     {
@@ -41,11 +43,6 @@ class ContactSectionRepository
     public static function findByIdOrFail(int $id): mixed
     {
         return static::model()::query()->findOrFail($id);
-    }
-
-    public static function delete(mixed $record): bool
-    {
-        return (bool) $record->delete();
     }
 
     public static function toggleStatus(mixed $record): bool
@@ -141,7 +138,7 @@ class ContactSectionRepository
     {
         [$direct, $translations] = static::splitAdminData($data);
 
-        $record = static::model()::query()->create($direct);
+        $record = self::create($direct);
         static::syncAdminTranslations($record, $translations);
 
         return $record->fresh();
@@ -151,7 +148,7 @@ class ContactSectionRepository
     {
         [$direct, $translations] = static::splitAdminData($data);
 
-        $updated = $record->update($direct);
+        $updated = self::update($record, $direct);
         static::syncAdminTranslations($record, $translations);
 
         return (bool) $updated;

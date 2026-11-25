@@ -2,6 +2,8 @@
 
 namespace App\Repositories;
 
+use Arafat\LaravelRepository\Repository;
+
 use App\Models\Admin;
 use App\Services\UploadService;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -9,7 +11,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 
-class AdminRepository
+class AdminRepository extends Repository
 {
     public static function model()
     {
@@ -18,12 +20,12 @@ class AdminRepository
 
     public static function findById(int $id): ?Admin
     {
-        return static::model()::query()->find($id);
+        return self::find($id);
     }
 
     public static function findByIdOrFail(int $id): Admin
     {
-        return static::model()::query()->findOrFail($id);
+        return self::findOrFail($id);
     }
 
     public static function findByEmail(string $email): ?Admin
@@ -42,7 +44,7 @@ class AdminRepository
         $roles = $data['role'] ?? $data['roles'] ?? [];
         unset($data['role'], $data['roles']);
 
-        $admin = static::model()::query()->create($data);
+        $admin = self::create($data);
 
         if (! empty($roles)) {
             $admin->assignRole($roles);
@@ -78,20 +80,24 @@ class AdminRepository
 
     /**
      * Toggle active/inactive, as the old AdminController::changeStatus
-     * did. Callers must refuse for the super admin (id 1) first.
+     * did. Callers must refuse for the admin's own account first.
      */
     public static function toggleStatus(Admin $admin): string
     {
-        $status = $admin->status === \App\Enums\UserStatusEnum::ACTIVE ? 'inactive' : 'active';
+        $status = ($admin->getAttributes()['status'] ?? $admin->status) === 'active' ? 'inactive' : 'active';
 
         $admin->update(['status' => $status]);
 
         return $status;
     }
 
-    public static function delete(Admin $admin): bool
+    public static function delete(mixed $record): bool
     {
-        return (bool) $admin->delete();
+        if ($record instanceof \Illuminate\Database\Eloquent\Model) {
+            return (bool) $record->delete();
+        }
+
+        return (bool) static::query()->destroy($record);
     }
 
     public static function findByForgetPasswordToken(string $token, ?string $email = null): ?Admin

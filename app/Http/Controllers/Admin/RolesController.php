@@ -2,9 +2,6 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Enums\RedirectTypeEnum;
-use App\Http\Controllers\Concerns\ChecksAdminPermissions;
-use App\Http\Controllers\Concerns\RedirectsWithMessage;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\AssignRoleRequest;
 use App\Http\Requests\RoleFormRequest;
@@ -15,12 +12,8 @@ use Spatie\Permission\Models\Role;
 
 class RolesController extends Controller
 {
-    use ChecksAdminPermissions;
-    use RedirectsWithMessage;
-
     public function index(Request $request)
     {
-        $this->checkAdminPermission('role.view');
         $roles = RoleRepository::paginate($this->perPage($request));
 
         return view('admin.roles.index', compact('roles'));
@@ -28,7 +21,6 @@ class RolesController extends Controller
 
     public function create()
     {
-        $this->checkAdminPermission('role.create');
         $permissions = RoleRepository::allPermissions();
         $permission_groups = RoleRepository::permissionGroups();
 
@@ -37,25 +29,21 @@ class RolesController extends Controller
 
     public function store(RoleFormRequest $request)
     {
-        $this->checkAdminPermission('role.store');
-
         RoleRepository::storeByRequest($request->validated());
 
-        return $this->redirectWithMessage(RedirectTypeEnum::CREATE->value, 'admin.role.index');
+        return redirect()->route('admin.role.index')
+            ->with('success', 'Role created successfully.');
     }
 
     public function show(Role $role)
     {
         // No dedicated show view exists (old code had none either);
         // the show route redirects to the edit screen.
-        $this->checkAdminPermission('role.view');
-
         return redirect()->route('admin.role.edit', $role->id);
     }
 
     public function edit(Role $role)
     {
-        $this->checkAdminPermission('role.edit');
         $permissions = RoleRepository::allPermissions();
         $permission_groups = RoleRepository::permissionGroups();
 
@@ -64,26 +52,26 @@ class RolesController extends Controller
 
     public function update(RoleFormRequest $request, Role $role)
     {
-        $this->checkAdminPermission('role.update');
-
         RoleRepository::updateByRequest($role, $request->validated());
 
-        return $this->redirectWithMessage(RedirectTypeEnum::UPDATE->value, 'admin.role.index');
+        return redirect()->route('admin.role.index')
+            ->with('success', 'Role updated successfully.');
     }
 
     public function destroy(Role $role)
     {
-        $this->checkAdminPermission('role.delete');
-        abort_if($role->id == 1, 403);
+        if ($role->id === 1) {
+            return back()->with('error', 'This role cannot be deleted.');
+        }
 
-        RoleRepository::delete($role);
+        $role->delete();
 
-        return $this->redirectWithMessage(RedirectTypeEnum::DELETE->value, 'admin.role.index');
+        return redirect()->route('admin.role.index')
+            ->with('success', 'Role deleted successfully.');
     }
 
     public function assignRoleView()
     {
-        $this->checkAdminPermission('role.assign');
         $admins = RoleRepository::activeAdmins();
         $roles = RoleRepository::allRoles();
 
@@ -102,12 +90,18 @@ class RolesController extends Controller
 
     public function assignRoleUpdate(AssignRoleRequest $request)
     {
-        $this->checkAdminPermission('role.assign');
-
         $admin = AdminRepository::findByIdOrFail((int) $request->input('user_id'));
 
         RoleRepository::assignRoles($admin, $request->validated()['role']);
 
-        return $this->redirectWithMessage(RedirectTypeEnum::UPDATE->value, 'admin.role.index');
+        return redirect()->route('admin.role.index')
+            ->with('success', 'Role updated successfully.');
+    }
+
+    private function perPage(Request $request): int
+    {
+        $perPage = (int) $request->input('per_page', 15);
+
+        return in_array($perPage, [10, 25, 50, 100], true) ? $perPage : 15;
     }
 }

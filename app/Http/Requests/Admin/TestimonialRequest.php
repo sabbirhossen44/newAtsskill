@@ -3,13 +3,12 @@
 namespace App\Http\Requests\Admin;
 
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Support\Facades\Auth;
 
 class TestimonialRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return (Auth::guard('admin')->check() && auth('admin')->user()?->can('testimonial.store')) ? true : false;
+        return true;
     }
 
     public function rules(): array

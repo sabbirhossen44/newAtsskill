@@ -2,6 +2,8 @@
 
 namespace App\Repositories;
 
+use Arafat\LaravelRepository\Repository;
+
 use Illuminate\Support\Facades\Schema;
 
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -10,7 +12,7 @@ use App\Models\CustomPage;
 use App\Services\TranslationService;
 use Illuminate\Support\Str;
 
-class PageRepository
+class PageRepository extends Repository
 {
     public static function model()
     {
@@ -41,7 +43,7 @@ class PageRepository
         $translations = $data['translations'] ?? null;
         unset($data['translations']);
 
-        $page = static::model()::query()->create($data);
+        $page = self::create($data);
 
         if (! empty($translations)) {
             TranslationService::sync($page, 'translations', $translations);
@@ -55,7 +57,7 @@ class PageRepository
         $translations = $data['translations'] ?? null;
         unset($data['translations']);
 
-        $updated = $page->update($data);
+        $updated = self::update($page, $data);
 
         if (! empty($translations)) {
             TranslationService::sync($page, 'translations', $translations);
@@ -85,11 +87,6 @@ class PageRepository
     public static function findByIdOrFail(int $id): mixed
     {
         return static::model()::query()->findOrFail($id);
-    }
-
-    public static function delete(mixed $record): bool
-    {
-        return (bool) $record->delete();
     }
 
     public static function toggleStatus(mixed $record): bool

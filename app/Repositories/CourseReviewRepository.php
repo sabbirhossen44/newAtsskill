@@ -2,6 +2,8 @@
 
 namespace App\Repositories;
 
+use Arafat\LaravelRepository\Repository;
+
 use App\Services\TranslationService;
 
 use Illuminate\Support\Facades\Schema;
@@ -11,7 +13,7 @@ use App\Models\Course;
 use App\Models\CourseReview;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
-class CourseReviewRepository
+class CourseReviewRepository extends Repository
 {
     public static function model()
     {
@@ -51,7 +53,7 @@ class CourseReviewRepository
 
     public static function storeByRequest(array $data): CourseReview
     {
-        return static::model()::query()->create($data);
+        return self::create($data);
     }
 
     public static function findForUser(int $courseId, int $userId): ?CourseReview
@@ -102,12 +104,16 @@ class CourseReviewRepository
 
     public static function findByIdOrFail(int $id): mixed
     {
-        return static::model()::query()->findOrFail($id);
+        return self::findOrFail($id);
     }
 
     public static function delete(mixed $record): bool
     {
-        return (bool) $record->delete();
+        if ($record instanceof \Illuminate\Database\Eloquent\Model) {
+            return (bool) $record->delete();
+        }
+
+        return (bool) static::query()->destroy($record);
     }
 
     public static function toggleStatus(mixed $record): bool

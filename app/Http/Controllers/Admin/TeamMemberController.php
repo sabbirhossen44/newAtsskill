@@ -27,9 +27,7 @@ class TeamMemberController extends Controller
     {
         TeamMemberRepository::storeByRequest($request->validated(), $request->file('image'));
 
-        $notification = ['messege' => __('Created Successfully'), 'alert-type' => 'success'];
-
-        return redirect()->route('admin.team-members.index')->with($notification);
+        return redirect()->route('admin.team-members.index')->with('success', __('Created Successfully'));
     }
 
     public function show($id)
@@ -51,31 +49,35 @@ class TeamMemberController extends Controller
 
         TeamMemberRepository::updateByRequest($teamMember, $request->validated(), $request->file('image'));
 
-        $notification = ['messege' => __('Updated Successfully'), 'alert-type' => 'success'];
-
-        return redirect()->route('admin.team-members.edit', $id)->with($notification);
+        return redirect()->route('admin.team-members.edit', $id)->with('success', __('Updated Successfully'));
     }
 
     public function destroy($id)
     {
         $teamMember = TeamMemberRepository::findByIdOrFail($id);
 
-        TeamMemberRepository::delete($teamMember);
+        TeamMemberRepository::deleteRecord($teamMember);
 
-        $notification = ['messege' => __('Deleted Successfully'), 'alert-type' => 'success'];
-
-        return redirect()->route('admin.team-members.index')->with($notification);
+        return redirect()->route('admin.team-members.index')->with('success', __('Deleted Successfully'));
     }
 
-    public function statusUpdate($id)
+    public function statusUpdate(Request $request, $id)
     {
         $teamMember = TeamMemberRepository::findByIdOrFail($id);
 
         TeamMemberRepository::toggleStatus($teamMember);
 
-        return response()->json([
-            'success' => true,
-            'message' => __('Updated Successfully'),
-        ]);
+        if ($request->expectsJson()) {
+            return response()->json(['success' => true, 'message' => __('Updated Successfully')]);
+        }
+
+        return back()->with('success', __('Updated Successfully'));
+    }
+
+    private function perPage(Request $request): int
+    {
+        $perPage = (int) $request->input('per_page', 15);
+
+        return in_array($perPage, [10, 25, 50, 100], true) ? $perPage : 15;
     }
 }

@@ -3,9 +3,6 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Http\Controllers\Concerns\ChecksAdminPermissions;
-use App\Http\Controllers\Concerns\RedirectsWithMessage;
-use App\Enums\RedirectTypeEnum;
 use App\Http\Requests\Admin\LanguageRequest;
 use App\Models\Language;
 use App\Repositories\LanguageRepository;
@@ -21,12 +18,8 @@ use Illuminate\Support\Facades\File;
  */
 class LanguageController extends Controller
 {
-    use ChecksAdminPermissions;
-    use RedirectsWithMessage;
-
     public function index(Request $request)
     {
-        $this->checkAdminPermission('language.view');
         Paginator::useBootstrap();
         $languages = LanguageRepository::paginateAdmin($request->input('keyword'), $this->perPage($request));
 
@@ -35,14 +28,11 @@ class LanguageController extends Controller
 
     public function create()
     {
-        $this->checkAdminPermission('language.create');
-
         return view('admin.language.create');
     }
 
     public function store(LanguageRequest $request)
     {
-        $this->checkAdminPermission('language.store');
         $data = $request->validated();
         $data['direction'] = in_array($data['code'], ['ar', 'he', 'fa', 'ur'], true) ? 'rtl' : 'ltr';
         $data['status'] = $request->input('status') === 'active' || $request->input('status') === 1 || $request->input('status') === '1' ? 'active' : 'inactive';
@@ -54,12 +44,11 @@ class LanguageController extends Controller
             File::put($destination, File::get($source));
         }
 
-        return $this->redirectWithMessage(RedirectTypeEnum::CREATE->value, 'admin.languages.index');
+        return redirect()->route('admin.languages.index')->with('success', 'Language created successfully.');
     }
 
     public function edit($id)
     {
-        $this->checkAdminPermission('language.edit');
         $item = LanguageRepository::findByIdOrFail((int) $id);
 
         return view('admin.language.edit', ['item' => $item, 'language' => $item]);
@@ -67,40 +56,40 @@ class LanguageController extends Controller
 
     public function update(LanguageRequest $request, Language $language)
     {
-        $this->checkAdminPermission('language.update');
         $data = $request->validated();
         if ($request->has('status')) {
             $data['status'] = $request->input('status') === 'active' || $request->input('status') === 1 || $request->input('status') === '1' ? 'active' : 'inactive';
         }
         LanguageRepository::updateByRequest($language, $data);
 
-        return $this->redirectWithMessage(RedirectTypeEnum::UPDATE->value, 'admin.languages.index');
+        return redirect()->route('admin.languages.index')->with('success', 'Language updated successfully.');
     }
 
     public function destroy($id)
     {
-        $this->checkAdminPermission('language.delete');
         $language = LanguageRepository::findByIdOrFail((int) $id);
-        LanguageRepository::delete($language);
+        $language->delete();
 
-        return $this->redirectWithMessage(RedirectTypeEnum::DELETE->value, 'admin.languages.index');
+        return redirect()->route('admin.languages.index')->with('success', 'Language deleted successfully.');
     }
 
     public function updateStatus(Request $request, Language $language)
     {
-        $this->checkAdminPermission('language.update');
         LanguageRepository::updateByRequest($language, ['status' => $language->status === 'active' ? 'inactive' : 'active']);
 
-        return response()->json(['success' => true, 'message' => __('Updated Successfully')]);
+        if ($request->expectsJson()) {
+            return response()->json(['success' => true, 'message' => __('Updated Successfully')]);
+        }
+
+        return back()->with('success', __('Updated Successfully'));
     }
 
     public function editStaticLanguages(Request $request, $code)
     {
-        $this->checkAdminPermission('language.edit');
         $language = LanguageRepository::findByCode($code) ?? abort(404);
         $filePath = base_path("lang/{$code}.json");
         if (! File::exists($filePath)) {
-            return redirect()->route('admin.languages.index')->with(['alert-type' => 'warning', 'messege' => __('Not Found!')]);
+            return redirect()->route('admin.languages.index')->with('error', __('Not Found!'));
         }
         $translations = json_decode(File::get($filePath), true) ?? [];
         $languages = Language::all();
@@ -110,10 +99,9 @@ class LanguageController extends Controller
 
     public function updateStaticLanguages(Request $request, $code)
     {
-        $this->checkAdminPermission('language.update');
         $filePath = base_path("lang/{$code}.json");
         if (! File::exists($filePath)) {
-            return redirect()->route('admin.languages.index')->with(['alert-type' => 'warning', 'messege' => __('Not Found!')]);
+            return redirect()->route('admin.languages.index')->with('error', __('Not Found!'));
         }
         $existing = json_decode(File::get($filePath), true) ?? [];
         $values = $request->input('values', []);
@@ -122,6 +110,13 @@ class LanguageController extends Controller
         }
         File::put($filePath, json_encode($existing, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
 
-        return $this->redirectWithMessage(RedirectTypeEnum::UPDATE->value, 'admin.languages.index');
+        return redirect()->route('admin.languages.index')->with('success', 'Language updated successfully.');
+    }
+
+    private function perPage(Request $request): int
+    {
+        $perPage = (int) $request->input('per_page', 15);
+
+        return in_array($perPage, [10, 25, 50, 100], true) ? $perPage : 15;
     }
 }

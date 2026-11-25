@@ -45,8 +45,8 @@
 <div class="col-md-6">
 <label class="form-label" for="type">Type</label>
 <select name="type" id="type" class="form-select @error('type') is-invalid @enderror">
-<option value="course" {{ (old('type', $item->type?->value ?? '')) == 'course' ? 'selected' : '' }}>Course</option>
-<option value="webinar" {{ (old('type', $item->type?->value ?? '')) == 'webinar' ? 'selected' : '' }}>Webinar</option>
+<option value="course" {{ (old('type', enum_value($item->type) ?? '')) == 'course' ? 'selected' : '' }}>Course</option>
+<option value="webinar" {{ (old('type', enum_value($item->type) ?? '')) == 'webinar' ? 'selected' : '' }}>Webinar</option>
 </select>
 @error('type')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
 </div>
@@ -99,8 +99,8 @@
 <div class="col-md-6">
 <label class="form-label" for="status">Status</label>
 <select name="status" id="status" class="form-select @error('status') is-invalid @enderror">
-<option value="active" {{ (old('status', $item->status?->value ?? '')) == 'active' ? 'selected' : '' }}>Active</option>
-<option value="inactive" {{ (old('status', $item->status?->value ?? '')) == 'inactive' ? 'selected' : '' }}>Inactive</option>
+<option value="active" {{ (old('status', enum_value($item->status) ?? '')) == 'active' ? 'selected' : '' }}>Active</option>
+<option value="inactive" {{ (old('status', enum_value($item->status) ?? '')) == 'inactive' ? 'selected' : '' }}>Inactive</option>
 </select>
 @error('status')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
 </div>

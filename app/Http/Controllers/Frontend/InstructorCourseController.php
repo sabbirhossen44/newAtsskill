@@ -15,19 +15,19 @@ use Illuminate\View\View;
 
 class InstructorCourseController extends Controller
 {
-    function index(): View
+    public function index(): View
     {
         $courses = CourseRepository::paginateForInstructor(auth()->id());
 
         return view('frontend.instructor-dashboard.course.index', compact('courses'));
     }
 
-    function create()
+    public function create()
     {
         return view('frontend.instructor-dashboard.course.create');
     }
 
-    function editView(string $id)
+    public function editView(string $id)
     {
         Session::put('course_create', $id);
         $course = CourseRepository::findByIdOrFail((int) $id);
@@ -36,7 +36,7 @@ class InstructorCourseController extends Controller
         return view('frontend.instructor-dashboard.course.create', compact('course', 'editMode'));
     }
 
-    function store(InstructorCourseStoreRequest $request)
+    public function store(InstructorCourseStoreRequest $request)
     {
         $data = $request->validated();
         $data['slug'] = $request->input('slug');
@@ -55,7 +55,7 @@ class InstructorCourseController extends Controller
         ]);
     }
 
-    function edit(Request $request)
+    public function edit(Request $request)
     {
         if (! Session::get('course_create')) {
             return redirect(route('instructor.courses.create'));
@@ -67,7 +67,6 @@ class InstructorCourseController extends Controller
                 $editMode = true;
 
                 return view('frontend.instructor-dashboard.course.create', compact('course', 'editMode'));
-                break;
             case '2':
                 return view('frontend.instructor-dashboard.course.more-information', CourseRepository::moreInfoData((int) request('id')));
                 break;
@@ -87,7 +86,7 @@ class InstructorCourseController extends Controller
         }
     }
 
-    function update(Request $request)
+    public function update(Request $request)
     {
         switch ($request->step) {
             case '2':
@@ -104,7 +103,6 @@ class InstructorCourseController extends Controller
                     'message' => __('Updated Successfully'),
                     'redirect' => route('instructor.courses.edit', ['id' => Session::get('course_create'), 'step' => $request->next_step]),
                 ]);
-                break;
             case '3':
                 return response()->json([
                     'status' => 'success',
@@ -124,29 +122,28 @@ class InstructorCourseController extends Controller
                 ]);
 
             default:
-                # code...
                 break;
         }
     }
 
-    function getInstructors(Request $request)
+    public function getInstructors(Request $request)
     {
         $instructors = CourseRepository::instructorsForPartner($request->q, auth()->id());
 
         return response()->json($instructors);
     }
 
-    function getFiltersByCategory(string $id)
+    public function getFiltersByCategory(string $id)
     {
         return view('frontend.instructor-dashboard.course.partials.filters', CourseRepository::filtersForCategory($id))->render();
     }
 
-    function showDeleteRequest(Request $request, $id)
+    public function showDeleteRequest(Request $request, $id)
     {
         return view('frontend.instructor-dashboard.course.partials.course-delete-request-modal', compact('id'));
     }
 
-    function sendDeleteRequest(InstructorCourseDeleteRequest $request)
+    public function sendDeleteRequest(InstructorCourseDeleteRequest $request)
     {
         $course = CourseRepository::findByIdOrFail((int) $request->course_id);
         if ($course->instructor_id != auth('web')->user()->id) {

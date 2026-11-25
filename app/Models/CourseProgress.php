@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Enums\ChapterItemTypeEnum;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -19,7 +18,6 @@ class CourseProgress extends Model
         return [
             'watched' => 'boolean',
             'current' => 'boolean',
-            'type' => \App\Enums\ChapterItemTypeEnum::class,
         ];
     }
 

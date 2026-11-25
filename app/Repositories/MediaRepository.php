@@ -3,136 +3,107 @@
 namespace App\Repositories;
 
 use App\Models\Media;
-use App\Services\ImageService;
+use Arafat\LaravelRepository\Repository;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 
-use Illuminate\Database\Eloquent\Model;
-
-class MediaRepository
+class MediaRepository extends Repository
 {
     public static function model()
     {
         return Media::class;
     }
 
-    public static function findById(int $id): ?Media
+    /**
+     * Store a media file in the database and file system.
+     *
+     * @param  UploadedFile  $file  The file to store.
+     * @param  string  $path  The path to store the file in.
+     * @param  string|null  $type  The type of media to store. If null, the type will be automatically determined.
+     * @return Media The stored media.
+     */
+    public static function storeByRequest(UploadedFile $file, string $path, ?string $type = null): Media
     {
-        return static::model()::query()->find($id);
-    }
+        $url = Storage::disk('public')->put('/'.trim($path, '/'), $file);
 
-    public static function storeByRequest(UploadedFile $file, string $path, ?string $type = null, ?string $folder = null, ?string $description = null): Media
-    {
-        [$upload, $optimizedPath] = ImageService::optimize($file);
-
-        try {
-            $storedPath = Storage::disk('public')->putFile($path, $optimizedPath ? new \Illuminate\Http\File($optimizedPath) : $upload);
-        } finally {
-            if ($optimizedPath && file_exists($optimizedPath)) {
-                unlink($optimizedPath);
-            }
+        if (! $type) {
+            $extension = strtolower($file->getClientOriginalExtension());
+            $type = in_array($extension, ['jpeg', 'jpg', 'png', 'gif', 'svg', 'webp']) ? 'image' : $extension;
         }
 
-        $extension = strtolower($file->getClientOriginalExtension());
-
-        return static::model()::query()->create([
+        return self::create([
+            'type' => $type,
+            'src' => $url,
             'name' => $file->getClientOriginalName(),
-            'src' => $storedPath,
-            'type' => $type ?? (in_array($extension, ImageService::SUPPORTED_EXTENSIONS, true) ? 'image' : $extension),
-            'extension' => $extension,
+            'extension' => strtolower($file->getClientOriginalExtension()),
         ]);
-    }
-
-    public static function updateByRequest(UploadedFile $file, string $path, ?string $type, Media $media, ?string $folder = null): Media
-    {
-        $fresh = static::storeByRequest($file, $path, $type, $folder);
-
-        static::deleteByMedia($media);
-
-        return $fresh;
-    }
-
-    public static function updateOrCreateByRequest(UploadedFile $file, string $path, ?string $type, ?Media $media, ?string $folder = null): Media
-    {
-        if ($media) {
-            return static::updateByRequest($file, $path, $type, $media, $folder);
-        }
-
-        return static::storeByRequest($file, $path, $type, $folder);
-    }
-
-    public static function deleteByMedia(Media $media): bool
-    {
-        if ($media->src) {
-            Storage::disk('public')->delete($media->src);
-        }
-
-        return (bool) $media->delete();
-    }
-
-    public static function storeByFromUrlRequest(string $url, string $path, ?string $description = null): ?Media
-    {
-        if (! str_starts_with($url, 'http://') && ! str_starts_with($url, 'https://')) {
-            return null;
-        }
-
-        $contents = @file_get_contents($url);
-
-        if ($contents === false) {
-            return null;
-        }
-
-        $name = basename(parse_url($url, PHP_URL_PATH) ?: 'remote-file');
-        $storedPath = Storage::disk('public')->put($path.'/'.$name, $contents);
-
-        if (! $storedPath) {
-            return null;
-        }
-
-        return static::model()::query()->create([
-            'name' => $name,
-            'src' => $storedPath,
-            'type' => 'image',
-            'extension' => strtolower(pathinfo($name, PATHINFO_EXTENSION)),
-        ]);
-    }
-
-    public static function optimizeExisting(Media $media, bool $force = false): bool
-    {
-        return false;
     }
 
     /**
-     * Sync a parent model's pivot media rows (course_media, blog_media, ...).
-     * $medias: [['file' => UploadedFile, 'is_primary' => bool], ...]
-     * $existingMediaIds: pivot media_ids to keep; others are removed.
+     * Replace the file of an existing media record.
+     *
+     * @param  UploadedFile  $file  The file to store.
+     * @param  string  $path  The path to store the file in.
+     * @param  string|null  $type  The type of media to store. If null, the type will be automatically determined.
+     * @param  Media  $media  The existing media record to update.
+     * @return Media The updated media record.
      */
-    public static function syncForParent(Model $parent, array $medias, string $pivotClass, string $parentKey, ?array $existingMediaIds = null): void
+    public static function updateByRequest(UploadedFile $file, string $path, ?string $type = null, Media $media): Media
     {
-        $order = (int) $pivotClass::query()->where($parentKey, $parent->id)->max('order');
+        $url = Storage::disk('public')->put('/'.trim($path, '/'), $file);
 
-        foreach ($medias as $item) {
-            $file = $item['file'] ?? null;
-
-            if (! $file instanceof UploadedFile) {
-                continue;
-            }
-
-            $media = static::storeByRequest($file, strtolower(class_basename($parent)), 'image');
-
-            $pivotClass::query()->create([
-                $parentKey => $parent->id,
-                'media_id' => $media->id,
-                'is_primary' => (bool) ($item['is_primary'] ?? false),
-                'order' => ++$order,
-            ]);
+        if (! $type) {
+            $extension = strtolower($file->getClientOriginalExtension());
+            $type = in_array($extension, ['jpeg', 'jpg', 'png', 'gif', 'svg', 'webp']) ? 'image' : $extension;
         }
 
-        if (is_array($existingMediaIds)) {
-            $pivotClass::query()
-                ->where($parentKey, $parent->id)
-                ->whereNotIn('media_id', $existingMediaIds)
-                ->delete();
+        if (Storage::exists($media->src)) {
+            Storage::delete($media->src);
         }
+
+        $media->update([
+            'type' => $type,
+            'src' => $url,
+            'name' => $file->getClientOriginalName(),
+            'extension' => strtolower($file->getClientOriginalExtension()),
+        ]);
+
+        return $media;
+    }
+
+    /**
+     * Update an existing media record or store a new one from an uploaded file.
+     *
+     * If a media record is provided, its file will be replaced.
+     * Otherwise, a new media record will be created and stored.
+     *
+     * @param  UploadedFile  $file  The uploaded file to store or replace the existing file with.
+     * @param  string  $path  The path where the file will be stored.
+     * @param  string|null  $type  The media type. If null, it will be determined automatically.
+     * @param  Media|null  $media  The existing media record to update, or null to create a new one.
+     * @return Media The updated or newly created media record.
+     */
+    public static function updateOrStoreByRequest(UploadedFile $file, string $path, ?string $type = null, ?Media $media = null): Media
+    {
+        if ($media) {
+            return self::updateByRequest($file, $path, $type, $media);
+        }
+
+        return self::storeByRequest($file, $path, $type);
+    }
+
+    /**
+     * Delete the stored file and the media record.
+     *
+     * @param  Media  $media  The media record to delete.
+     * @return bool Whether the media record was deleted.
+     */
+    public static function deleteByRequest(Media $media): bool
+    {
+        if ($media->src && Storage::exists($media->src)) {
+            Storage::delete($media->src);
+        }
+
+        return (bool) $media->delete();
     }
 }

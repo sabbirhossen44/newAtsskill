@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Enums\LandingPageStatusEnum;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
@@ -13,12 +12,6 @@ class LandingPage extends Model
 
     protected $guarded = ['id'];
 
-    protected function casts(): array
-    {
-        return [
-            'status' => \App\Enums\LandingPageStatusEnum::class,
-        ];
-    }
 
     protected static function boot(): void
     {

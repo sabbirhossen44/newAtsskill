@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Http\Controllers\Concerns\ChecksAdminPermissions;
 use App\Models\BasicPayment;
 use App\Models\MultiCurrency;
 use Illuminate\Http\Request;
@@ -16,11 +15,8 @@ use Illuminate\Http\Request;
  */
 class BasicPaymentController extends Controller
 {
-    use ChecksAdminPermissions;
-
     public function basicpayment()
     {
-        $this->checkAdminPermission('basic.payment.view');
         $basicPayment = (object) BasicPayment::query()->pluck('value', 'key')->all();
         $currencies = MultiCurrency::get();
 
@@ -46,25 +42,22 @@ class BasicPaymentController extends Controller
 
     public function update_stripe(Request $request)
     {
-        $this->checkAdminPermission('basic.payment.update');
         $this->saveKeys($request, ['stripe_key', 'stripe_secret', 'stripe_charge', 'stripe_status', 'stripe_image']);
 
-        return redirect()->back()->with(['messege' => __('Update Successfully'), 'alert-type' => 'success']);
+        return redirect()->back()->with('success', __('Update Successfully'));
     }
 
     public function update_paypal(Request $request)
     {
-        $this->checkAdminPermission('basic.payment.update');
         $this->saveKeys($request, ['paypal_client_id', 'paypal_secret_key', 'paypal_charge', 'paypal_status', 'paypal_account_mode', 'paypal_app_id', 'paypal_image']);
 
-        return redirect()->back()->with(['messege' => __('Update Successfully'), 'alert-type' => 'success']);
+        return redirect()->back()->with('success', __('Update Successfully'));
     }
 
     public function update_bank_payment(Request $request)
     {
-        $this->checkAdminPermission('basic.payment.update');
         $this->saveKeys($request, ['bank_details', 'bank_status', 'bank_name', 'bank_account_name', 'bank_account_number', 'bank_routing_number']);
 
-        return redirect()->back()->with(['messege' => __('Update Successfully'), 'alert-type' => 'success']);
+        return redirect()->back()->with('success', __('Update Successfully'));
     }
 }

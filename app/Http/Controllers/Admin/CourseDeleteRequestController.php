@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Http\Controllers\Concerns\ChecksAdminPermissions;
 use App\Models\Course;
 use App\Repositories\CourseDeleteRequestRepository;
 use Illuminate\Http\Request;
@@ -16,11 +15,8 @@ use Illuminate\Pagination\Paginator;
  */
 class CourseDeleteRequestController extends Controller
 {
-    use ChecksAdminPermissions;
-
     public function index()
     {
-        $this->checkAdminPermission('course.management');
         Paginator::useBootstrap();
         $deleteRequests = CourseDeleteRequestRepository::paginateAdmin(null, $this->perPage(request()));
         $messages = $deleteRequests;
@@ -30,7 +26,6 @@ class CourseDeleteRequestController extends Controller
 
     public function show($id)
     {
-        $this->checkAdminPermission('course.management');
         $item = CourseDeleteRequestRepository::findByIdOrFail((int) $id);
 
         return view('admin.course-delete-request.show', ['item' => $item]);
@@ -38,7 +33,6 @@ class CourseDeleteRequestController extends Controller
 
     public function update(Request $request, $id)
     {
-        $this->checkAdminPermission('course.management');
         $message = CourseDeleteRequestRepository::findByIdOrFail((int) $id);
         if ($request->input('action') === 'inactive') {
             Course::findOrFail($message->course_id)->delete();
@@ -48,15 +42,21 @@ class CourseDeleteRequestController extends Controller
             $message->update(['status' => 0]);
         }
 
-        return redirect()->back()->with(['messege' => __('Updated successfully'), 'alert-type' => 'success']);
+        return redirect()->back()->with('success', __('Updated successfully'));
     }
 
     public function destroy($id)
     {
-        $this->checkAdminPermission('course.management');
         $message = CourseDeleteRequestRepository::findByIdOrFail((int) $id);
-        CourseDeleteRequestRepository::delete($message);
+        $message->delete();
 
-        return redirect()->route('admin.course-delete-request.index')->with(['messege' => __('Deleted successfully'), 'alert-type' => 'success']);
+        return redirect()->route('admin.course-delete-request.index')->with('success', __('Deleted successfully'));
+    }
+
+    private function perPage(Request $request): int
+    {
+        $perPage = (int) $request->input('per_page', 15);
+
+        return in_array($perPage, [10, 25, 50, 100], true) ? $perPage : 15;
     }
 }

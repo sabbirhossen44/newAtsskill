@@ -2,12 +2,14 @@
 
 namespace App\Repositories;
 
+use Arafat\LaravelRepository\Repository;
+
 use App\Models\LessonQuestion;
 use App\Models\LessonReply;
 use App\Services\TinymceImageService;
 use Illuminate\Support\Collection;
 
-class LessonReplyRepository
+class LessonReplyRepository extends Repository
 {
     public static function model()
     {
@@ -16,7 +18,7 @@ class LessonReplyRepository
 
     public static function storeByRequest(array $data): LessonReply
     {
-        $reply = static::model()::query()->create([
+        $reply = self::create([
             'user_id' => $data['user_id'],
             'question_id' => $data['question_id'],
             'reply' => $data['reply'],

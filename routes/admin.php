@@ -59,20 +59,37 @@ use App\Http\Controllers\Admin\SettingController;
 use App\Http\Controllers\Admin\TeamMemberController;
 use App\Http\Controllers\Admin\ProfileController as AdminProfileController;
 use App\Http\Controllers\Global\CloudStorageController;
-use App\Http\Middleware\EnsureAdminAuthenticated;
 use Illuminate\Support\Facades\Route;
 
 /*
 |--------------------------------------------------------------------------
-| Admin Routes — allSolution style
+| Admin Routes — allSolution style (plan/allsolution-style-v2.md §6)
 |--------------------------------------------------------------------------
-| One Route::controller() group per resource inside a single
-| prefix('admin')->name('admin.') wrapper. Explicit routes only —
-| no Route::resource (see plan/allsolution-style.md §4).
-| URIs, methods, names and middleware are unchanged from the old code.
+| One Route::name('admin.')->group(...) — the 'admin' URI prefix is
+| applied in bootstrap/app.php, verbatim allSolution — containing one
+| Route::controller(XController::class)->group(...) per resource.
+| Explicit routes only — no Route::resource. URIs, methods, names
+| and middleware are unchanged from the old code (553 routes).
+|
+| Deliberate deviations from the verbatim shape, kept so the route
+| list stays identical (see §8.9 of the spec):
+| - No 'guest:admin' on the login routes and no throttle:5,1 on
+|   POST store-login: the old routes carried no such middleware.
+|   Adding either changes the route middleware and was tested and
+|   reverted (login flow itself passes with it, but the hard
+|   constraint is an identical route list).
+| - POST logout stays outside the authenticated group, as in the
+|   old code (it carried only the 'web' middleware).
+| - The authenticated group keeps ['auth:admin', 'admin.auth']:
+|   'admin.auth' is the alias for EnsureAdminAuthenticated, so the
+|   resolved middleware is identical to the old explicit class.
+| - No withTrashed(): only Course and Media use SoftDeletes and
+|   neither is implicitly bound by any admin route (course routes
+|   use {id}), so there is nothing for it to apply to.
+| - No bulk / toggle routes: the old code had none to preserve.
 */
 
-Route::prefix('admin')->name('admin.')->group(function () {
+Route::name('admin.')->group(function () {
     // Guest (admin login / password reset) — no guest middleware here,
     // exactly as in the old code (allSolution wraps these in guest:admin,
     // but the old routes had no such middleware, so it is not added).
@@ -93,7 +110,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
     });
 
     // Authenticated admin area
-    Route::middleware(['auth:admin', EnsureAdminAuthenticated::class])->group(function () {
+    Route::middleware(['auth:admin', 'admin.auth'])->group(function () {
         Route::get('/', [DashboardController::class, 'dashboard']);
         Route::get('dashboard', [DashboardController::class, 'dashboard'])->name('dashboard');
 
@@ -167,7 +184,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         // Controllers + routes for the admin.* names referenced by
         // resources/views/admin/*. URIs/methods follow the old
         // SkillGro module routes; only the missing names were added.
-        Route::controller(\App\Http\Controllers\Admin\AboutSectionController::class)->group(function () {
+        Route::controller(AboutSectionController::class)->group(function () {
             Route::get('about-section', 'index')->name('about-section.index');
             Route::get('about-section/create', 'create')->name('about-section.create');
             Route::post('about-section', 'store')->name('about-section.store');
@@ -176,7 +193,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::delete('about-section/{id}', 'destroy')->name('about-section.destroy');
         });
 
-        Route::controller(\App\Http\Controllers\Admin\BadgesController::class)->group(function () {
+        Route::controller(BadgesController::class)->group(function () {
             Route::get('badges', 'index')->name('badges.index');
             Route::get('badges/create', 'create')->name('badges.create');
             Route::post('badges', 'store')->name('badges.store');
@@ -185,7 +202,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::delete('badges/{id}', 'destroy')->name('badges.destroy');
         });
 
-        Route::controller(\App\Http\Controllers\Admin\BannerSectionController::class)->group(function () {
+        Route::controller(BannerSectionController::class)->group(function () {
             Route::get('banner-section', 'index')->name('banner-section.index');
             Route::get('banner-section/create', 'create')->name('banner-section.create');
             Route::post('banner-section', 'store')->name('banner-section.store');
@@ -194,14 +211,14 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::delete('banner-section/{id}', 'destroy')->name('banner-section.destroy');
         });
 
-        Route::controller(\App\Http\Controllers\Admin\BasicPaymentController::class)->group(function () {
+        Route::controller(BasicPaymentController::class)->group(function () {
             Route::get('basicpayment', 'basicpayment')->name('basicpayment');
             Route::put('update-bank-payment', 'update_bank_payment')->name('update-bank-payment');
             Route::put('update-paypal', 'update_paypal')->name('update-paypal');
             Route::put('update-stripe', 'update_stripe')->name('update-stripe');
         });
 
-        Route::controller(\App\Http\Controllers\Admin\BlogCategoryController::class)->group(function () {
+        Route::controller(BlogCategoryController::class)->group(function () {
             Route::put('blog-category/status-update/{id}', 'statusUpdate')->name('blog-category.status-update');
             Route::get('blog-category', 'index')->name('blog-category.index');
             Route::get('blog-category/create', 'create')->name('blog-category.create');
@@ -211,7 +228,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::delete('blog-category/{id}', 'destroy')->name('blog-category.destroy');
         });
 
-        Route::controller(\App\Http\Controllers\Admin\BlogCommentController::class)->group(function () {
+        Route::controller(BlogCommentController::class)->group(function () {
             Route::put('blog-comment/status-update/{id}', 'statusUpdate')->name('blog-comment.status-update');
             Route::get('blog-comment', 'index')->name('blog-comment.index');
             Route::get('blog-comment/{id}', 'show')->name('blog-comment.show');
@@ -219,7 +236,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::delete('blog-comment/{id}', 'destroy')->name('blog-comment.destroy');
         });
 
-        Route::controller(\App\Http\Controllers\Admin\BlogController::class)->group(function () {
+        Route::controller(BlogController::class)->group(function () {
             Route::put('blogs/status-update/{id}', 'statusUpdate')->name('blogs.status-update');
             Route::get('blogs', 'index')->name('blogs.index');
             Route::get('blogs/create', 'create')->name('blogs.create');
@@ -229,7 +246,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::delete('blogs/{blog}', 'destroy')->name('blogs.destroy');
         });
 
-        Route::controller(\App\Http\Controllers\Admin\BrandController::class)->group(function () {
+        Route::controller(BrandController::class)->group(function () {
             Route::put('brand/status-update/{id}', 'statusUpdate')->name('brand.status-update');
             Route::get('brand', 'index')->name('brand.index');
             Route::get('brand/create', 'create')->name('brand.create');
@@ -239,7 +256,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::delete('brand/{id}', 'destroy')->name('brand.destroy');
         });
 
-        Route::controller(\App\Http\Controllers\Admin\CertificateBuilderController::class)->group(function () {
+        Route::controller(CertificateBuilderController::class)->group(function () {
             Route::get('certificate-builder', 'index')->name('certificate-builder.index');
             Route::get('certificate-builder/create', 'create')->name('certificate-builder.create');
             Route::post('certificate-builder', 'store')->name('certificate-builder.store');
@@ -248,13 +265,13 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::delete('certificate-builder/{id}', 'destroy')->name('certificate-builder.destroy');
         });
 
-        Route::controller(\App\Http\Controllers\Admin\ContactMessageController::class)->group(function () {
+        Route::controller(ContactMessageController::class)->group(function () {
             Route::get('contact-message/{id}', 'show')->name('contact-message');
             Route::delete('contact-message-delete/{id}', 'destroy')->name('contact-message-delete');
             Route::get('contact-messages', 'index')->name('contact-messages');
         });
 
-        Route::controller(\App\Http\Controllers\Admin\ContactSectionController::class)->group(function () {
+        Route::controller(ContactSectionController::class)->group(function () {
             Route::get('contact-section', 'index')->name('contact-section.index');
             Route::get('contact-section/create', 'create')->name('contact-section.create');
             Route::post('contact-section', 'store')->name('contact-section.store');
@@ -263,7 +280,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::delete('contact-section/{id}', 'destroy')->name('contact-section.destroy');
         });
 
-        Route::controller(\App\Http\Controllers\Admin\CounterSectionController::class)->group(function () {
+        Route::controller(CounterSectionController::class)->group(function () {
             Route::get('counter-section', 'index')->name('counter-section.index');
             Route::get('counter-section/create', 'create')->name('counter-section.create');
             Route::post('counter-section', 'store')->name('counter-section.store');
@@ -272,7 +289,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::delete('counter-section/{id}', 'destroy')->name('counter-section.destroy');
         });
 
-        Route::controller(\App\Http\Controllers\Admin\CountryController::class)->group(function () {
+        Route::controller(CountryController::class)->group(function () {
             Route::get('country', 'index')->name('country.index');
             Route::get('country/create', 'create')->name('country.create');
             Route::post('country', 'store')->name('country.store');
@@ -281,7 +298,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::delete('country/{country}', 'destroy')->name('country.destroy');
         });
 
-        Route::controller(\App\Http\Controllers\Admin\CouponController::class)->group(function () {
+        Route::controller(CouponController::class)->group(function () {
             Route::get('coupon', 'index')->name('coupon.index');
             Route::get('coupon/create', 'create')->name('coupon.create');
             Route::post('coupon', 'store')->name('coupon.store');
@@ -290,7 +307,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::delete('coupon/{id}', 'destroy')->name('coupon.destroy');
         });
 
-        Route::controller(\App\Http\Controllers\Admin\CourseCategoryController::class)->group(function () {
+        Route::controller(CourseCategoryController::class)->group(function () {
             Route::put('course-category/status-update/{id}', 'statusUpdate')->name('course-category.status-update');
             Route::get('course-category', 'index')->name('course-category.index');
             Route::get('course-category/create', 'create')->name('course-category.create');
@@ -300,7 +317,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::delete('course-category/{id}', 'destroy')->name('course-category.destroy');
         });
 
-        Route::controller(\App\Http\Controllers\Admin\CourseController::class)->group(function () {
+        Route::controller(CourseController::class)->group(function () {
             Route::post('courses/status-update/{id}', 'statusUpdate')->name('courses.status-update');
             Route::get('course', 'index')->name('course.index');
             Route::get('courses', 'index')->name('courses.index');
@@ -311,13 +328,13 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::delete('course/{id}', 'destroy')->name('course.destroy');
         });
 
-        Route::controller(\App\Http\Controllers\Admin\CourseDeleteRequestController::class)->group(function () {
+        Route::controller(CourseDeleteRequestController::class)->group(function () {
             Route::get('course-delete-request', 'index')->name('course-delete-request.index');
             Route::get('course-delete-request/{id}', 'show')->name('course-delete-request.show');
             Route::delete('course-delete-request/{id}', 'destroy')->name('course-delete-request.destroy');
         });
 
-        Route::controller(\App\Http\Controllers\Admin\CourseLanguageController::class)->group(function () {
+        Route::controller(CourseLanguageController::class)->group(function () {
             Route::put('course-language/status-update/{id}', 'statusUpdate')->name('course-language.status-update');
             Route::get('course-language', 'index')->name('course-language.index');
             Route::get('course-language/create', 'create')->name('course-language.create');
@@ -327,7 +344,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::delete('course-language/{id}', 'destroy')->name('course-language.destroy');
         });
 
-        Route::controller(\App\Http\Controllers\Admin\CourseLevelController::class)->group(function () {
+        Route::controller(CourseLevelController::class)->group(function () {
             Route::put('course-level/status-update/{id}', 'statusUpdate')->name('course-level.status-update');
             Route::get('course-level', 'index')->name('course-level.index');
             Route::get('course-level/create', 'create')->name('course-level.create');
@@ -337,7 +354,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::delete('course-level/{id}', 'destroy')->name('course-level.destroy');
         });
 
-        Route::controller(\App\Http\Controllers\Admin\CourseReviewController::class)->group(function () {
+        Route::controller(CourseReviewController::class)->group(function () {
             Route::get('course-review', 'index')->name('course-review.index');
             Route::get('course-review/{id}', 'show')->name('course-review.show');
             Route::get('course-review/{id}/edit', 'edit')->name('course-review.edit');
@@ -345,7 +362,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::delete('course-review/{id}', 'destroy')->name('course-review.destroy');
         });
 
-        Route::controller(\App\Http\Controllers\Admin\CourseSubCategoryController::class)->group(function () {
+        Route::controller(CourseSubCategoryController::class)->group(function () {
             Route::put('course-sub-category/status-update/{id}', 'statusUpdate')->name('course-sub-category.status-update');
             Route::get('course-sub-category/{parent_id}', 'index')->name('course-sub-category.index');
             Route::get('course-sub-category/{parent_id}/create', 'create')->name('course-sub-category.create');
@@ -355,7 +372,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::delete('course-sub-category/{parent_id}/{sub_category_id}', 'destroy')->name('course-sub-category.destroy');
         });
 
-        Route::controller(\App\Http\Controllers\Admin\CurrencyController::class)->group(function () {
+        Route::controller(CurrencyController::class)->group(function () {
             Route::get('currency', 'index')->name('currency.index');
             Route::get('currency/create', 'create')->name('currency.create');
             Route::post('currency', 'store')->name('currency.store');
@@ -364,7 +381,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::delete('currency/{id}', 'destroy')->name('currency.destroy');
         });
 
-        Route::controller(\App\Http\Controllers\Admin\CustomerController::class)->group(function () {
+        Route::controller(CustomerController::class)->group(function () {
             Route::get('active-customers', 'active_customer')->name('active-customers');
             Route::get('all-customers', 'index')->name('all-customers');
             Route::get('banned-customers', 'banned_customers')->name('banned-customers');
@@ -373,7 +390,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('non-verified-customers', 'non_verified_customers')->name('non-verified-customers');
         });
 
-        Route::controller(\App\Http\Controllers\Admin\EmailSettingController::class)->group(function () {
+        Route::controller(EmailSettingController::class)->group(function () {
             Route::get('edit-email-template/{id}', 'edit_email_template')->name('edit-email-template');
             Route::get('email-configuration', 'email_config')->name('email-configuration');
             Route::post('test/mail/credentials', 'test_mail_credentials')->name('test-mail-credentials');
@@ -381,7 +398,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::put('update-email-template/{id}', 'update_email_template')->name('update-email-template');
         });
 
-        Route::controller(\App\Http\Controllers\Admin\FaqController::class)->group(function () {
+        Route::controller(FaqController::class)->group(function () {
             Route::put('faq/status-update/{id}', 'statusUpdate')->name('faq.status-update');
             Route::get('faq', 'index')->name('faq.index');
             Route::get('faq/create', 'create')->name('faq.create');
@@ -391,7 +408,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::delete('faq/{id}', 'destroy')->name('faq.destroy');
         });
 
-        Route::controller(\App\Http\Controllers\Admin\FaqSectionController::class)->group(function () {
+        Route::controller(FaqSectionController::class)->group(function () {
             Route::get('faq-section', 'index')->name('faq-section.index');
             Route::get('faq-section/create', 'create')->name('faq-section.create');
             Route::post('faq-section', 'store')->name('faq-section.store');
@@ -400,7 +417,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::delete('faq-section/{id}', 'destroy')->name('faq-section.destroy');
         });
 
-        Route::controller(\App\Http\Controllers\Admin\FeaturedCourseSectionController::class)->group(function () {
+        Route::controller(FeaturedCourseSectionController::class)->group(function () {
             Route::get('featured-course-section', 'index')->name('featured-course-section.index');
             Route::get('featured-course-section/create', 'create')->name('featured-course-section.create');
             Route::post('featured-course-section', 'store')->name('featured-course-section.store');
@@ -409,7 +426,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::delete('featured-course-section/{id}', 'destroy')->name('featured-course-section.destroy');
         });
 
-        Route::controller(\App\Http\Controllers\Admin\FeaturedInstructorSectionController::class)->group(function () {
+        Route::controller(FeaturedInstructorSectionController::class)->group(function () {
             Route::get('featured-instructor-section', 'index')->name('featured-instructor-section.index');
             Route::get('featured-instructor-section/create', 'create')->name('featured-instructor-section.create');
             Route::post('featured-instructor-section', 'store')->name('featured-instructor-section.store');
@@ -418,7 +435,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::delete('featured-instructor-section/{id}', 'destroy')->name('featured-instructor-section.destroy');
         });
 
-        Route::controller(\App\Http\Controllers\Admin\FooterSettingController::class)->group(function () {
+        Route::controller(FooterSettingController::class)->group(function () {
             Route::get('footersetting', 'index')->name('footersetting.index');
             Route::get('footersetting/create', 'create')->name('footersetting.create');
             Route::post('footersetting', 'store')->name('footersetting.store');
@@ -427,7 +444,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::delete('footersetting/{id}', 'destroy')->name('footersetting.destroy');
         });
 
-        Route::controller(\App\Http\Controllers\Admin\GlobalSettingController::class)->group(function () {
+        Route::controller(GlobalSettingController::class)->group(function () {
             Route::post('system-update/store', 'systemUpdateStore')->name('system-update.store');
             Route::get('cache-clear', 'cache_clear')->name('cache-clear');
             Route::post('cache-clear', 'cache_clear_confirm')->name('cache-clear-confirm');
@@ -453,7 +470,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::put('update-tawk-chat', 'update_tawk_chat')->name('update-tawk-chat');
         });
 
-        Route::controller(\App\Http\Controllers\Admin\HeroSectionController::class)->group(function () {
+        Route::controller(HeroSectionController::class)->group(function () {
             Route::get('hero-section', 'index')->name('hero-section.index');
             Route::get('hero-section/create', 'create')->name('hero-section.create');
             Route::post('hero-section', 'store')->name('hero-section.store');
@@ -462,7 +479,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::delete('hero-section/{id}', 'destroy')->name('hero-section.destroy');
         });
 
-        Route::controller(\App\Http\Controllers\Admin\InstructorRequestController::class)->group(function () {
+        Route::controller(InstructorRequestController::class)->group(function () {
             Route::get('instructor-request', 'index')->name('instructor-request.index');
             Route::get('instructor-request/{id}', 'show')->name('instructor-request.show');
             Route::get('instructor-request/{id}/edit', 'edit')->name('instructor-request.edit');
@@ -470,11 +487,11 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::delete('instructor-request/{id}', 'destroy')->name('instructor-request.destroy');
         });
 
-        Route::controller(\App\Http\Controllers\Admin\InstructorRequestSettingController::class)->group(function () {
+        Route::controller(InstructorRequestSettingController::class)->group(function () {
             Route::put('instructor-request-setting/{id}', 'update')->name('instructor-request-setting.update');
         });
 
-        Route::controller(\App\Http\Controllers\Admin\LanguageController::class)->group(function () {
+        Route::controller(LanguageController::class)->group(function () {
             Route::get('languages', 'index')->name('languages.index');
             Route::get('languages/create', 'create')->name('languages.create');
             Route::post('languages', 'store')->name('languages.store');
@@ -485,7 +502,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('languages/update-static-lang/{code}', 'editStaticLanguages')->name('languages.edit-static-languages');
         });
 
-        Route::controller(\App\Http\Controllers\Admin\MenuBuilderController::class)->group(function () {
+        Route::controller(MenuBuilderController::class)->group(function () {
             Route::get('menu-builder', 'index')->name('menubuilder.index');
             Route::post('menus/create', 'createMenu')->name('menus.create');
             Route::post('menu-items/create', 'addMenuItem')->name('menus.items.create');
@@ -494,14 +511,14 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::post('menu-items/delete', 'deleteMenuItem')->name('menus.items.delete');
         });
 
-        Route::controller(\App\Http\Controllers\Admin\NewsletterController::class)->group(function () {
+        Route::controller(NewsletterController::class)->group(function () {
             Route::get('send-mail-to-newsletter', 'create')->name('send-mail-to-newsletter');
             Route::post('send-mail-to-subscriber', 'store')->name('send-mail-to-subscriber');
             Route::delete('subscriber-delete/{id}', 'destroy')->name('subscriber-delete');
             Route::get('subscriber-list', 'index')->name('subscriber-list');
         });
 
-        Route::controller(\App\Http\Controllers\Admin\NewsletterSectionController::class)->group(function () {
+        Route::controller(NewsletterSectionController::class)->group(function () {
             Route::get('newsletter-section', 'index')->name('newsletter-section.index');
             Route::get('newsletter-section/create', 'create')->name('newsletter-section.create');
             Route::post('newsletter-section', 'store')->name('newsletter-section.store');
@@ -510,7 +527,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::delete('newsletter-section/{id}', 'destroy')->name('newsletter-section.destroy');
         });
 
-        Route::controller(\App\Http\Controllers\Admin\OrderController::class)->group(function () {
+        Route::controller(OrderController::class)->group(function () {
             Route::post('update-order/{id}', 'updateOrder')->name('order.update');
             Route::delete('order-delete/{id}', 'destroy')->name('order.destroy');
             Route::get('order/{id}', 'show')->name('order');
@@ -519,7 +536,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('order/invoice/{id}', 'printInvoice')->name('print-invoice');
         });
 
-        Route::controller(\App\Http\Controllers\Admin\OurFeaturesSectionController::class)->group(function () {
+        Route::controller(OurFeaturesSectionController::class)->group(function () {
             Route::get('our-features-section', 'index')->name('our-features-section.index');
             Route::get('our-features-section/create', 'create')->name('our-features-section.create');
             Route::post('our-features-section', 'store')->name('our-features-section.store');
@@ -528,7 +545,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::delete('our-features-section/{id}', 'destroy')->name('our-features-section.destroy');
         });
 
-        Route::controller(\App\Http\Controllers\Admin\PageBuilderController::class)->group(function () {
+        Route::controller(PageBuilderController::class)->group(function () {
             Route::put('page-builder/status-update/{id}', 'statusUpdate')->name('page-builder.status-update');
             Route::get('page-builder', 'index')->name('page-builder.index');
             Route::get('page-builder/create', 'create')->name('page-builder.create');
@@ -538,7 +555,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::delete('page-builder/{page_builder}', 'destroy')->name('page-builder.destroy');
         });
 
-        Route::controller(\App\Http\Controllers\Admin\PaymentGatewayController::class)->group(function () {
+        Route::controller(PaymentGatewayController::class)->group(function () {
             Route::put('flutterwave-update', 'flutterwave_update')->name('flutterwave-update');
             Route::put('instamojo-update', 'instamojo_update')->name('instamojo-update');
             Route::put('mollie-update', 'mollie_update')->name('mollie-update');
@@ -548,11 +565,11 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::put('uddoktapay-update', 'uddoktapay_update')->name('uddoktapay-update');
         });
 
-        Route::controller(\App\Http\Controllers\Admin\RefundController::class)->group(function () {
+        Route::controller(RefundController::class)->group(function () {
             Route::get('refund-request', 'index')->name('refund-request');
         });
 
-        Route::controller(\App\Http\Controllers\Admin\SectionSettingController::class)->group(function () {
+        Route::controller(SectionSettingController::class)->group(function () {
             Route::get('section-settings/create', 'create')->name('section-setting.create');
             Route::post('section-settings', 'store')->name('section-setting.store');
             Route::get('section-settings/{id}/edit', 'edit')->name('section-setting.edit');
@@ -560,7 +577,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::delete('section-settings/{id}', 'destroy')->name('section-setting.destroy');
         });
 
-        Route::controller(\App\Http\Controllers\Admin\SiteAppearanceController::class)->group(function () {
+        Route::controller(SiteAppearanceController::class)->group(function () {
             Route::get('site-appearance', 'index')->name('site-appearance.index');
             Route::get('site-appearance/create', 'create')->name('site-appearance.create');
             Route::post('site-appearance', 'store')->name('site-appearance.store');
@@ -569,7 +586,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::delete('site-appearance/{id}', 'destroy')->name('site-appearance.destroy');
         });
 
-        Route::controller(\App\Http\Controllers\Admin\SiteColorSettingController::class)->group(function () {
+        Route::controller(SiteColorSettingController::class)->group(function () {
             Route::get('site-color-settings/create', 'create')->name('site-color-setting.create');
             Route::post('site-color-settings', 'store')->name('site-color-setting.store');
             Route::get('site-color-settings/{id}/edit', 'edit')->name('site-color-setting.edit');
@@ -577,7 +594,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::delete('site-color-settings/{id}', 'destroy')->name('site-color-setting.destroy');
         });
 
-        Route::controller(\App\Http\Controllers\Admin\SocialLinkController::class)->group(function () {
+        Route::controller(SocialLinkController::class)->group(function () {
             Route::get('social-link', 'index')->name('social-link.index');
             Route::get('social-link/create', 'create')->name('social-link.create');
             Route::post('social-link', 'store')->name('social-link.store');
@@ -586,7 +603,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::delete('social-link/{id}', 'destroy')->name('social-link.destroy');
         });
 
-        Route::controller(\App\Http\Controllers\Admin\TestimonialController::class)->group(function () {
+        Route::controller(TestimonialController::class)->group(function () {
             Route::put('testimonial/status-update/{id}', 'statusUpdate')->name('testimonial.status-update');
             Route::get('testimonial', 'index')->name('testimonial.index');
             Route::get('testimonial/create', 'create')->name('testimonial.create');
@@ -596,7 +613,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::delete('testimonial/{id}', 'destroy')->name('testimonial.destroy');
         });
 
-        Route::controller(\App\Http\Controllers\Admin\WithdrawController::class)->group(function () {
+        Route::controller(WithdrawController::class)->group(function () {
             Route::get('withdraw-method', 'index')->name('withdraw-method.index');
             Route::get('withdraw-method/create', 'create')->name('withdraw-method.create');
             Route::post('withdraw-method', 'store')->name('withdraw-method.store');

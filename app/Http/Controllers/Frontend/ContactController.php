@@ -9,14 +9,14 @@ use App\Services\ContactMessageService;
 
 class ContactController extends Controller
 {
-    function index()
+    public function index()
     {
         $contact = ContactMessageRepository::contactSection();
 
         return view('frontend.pages.contact', compact('contact'));
     }
 
-    function sendMail(ContactSendMailRequest $request)
+    public function sendMail(ContactSendMailRequest $request)
     {
         $validated = $request->validated();
 

@@ -2,18 +2,23 @@
 
 namespace App\Repositories;
 
-use App\Http\Controllers\Concerns\SendsAppMail;
+use Arafat\LaravelRepository\Repository;
+
+use App\Services\AppMailService;
 use App\Models\LessonQuestion;
 use App\Models\LessonReply;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 /**
  * Instructor lesson Q&A (moved from InstructorLessonQnaController).
- * Reply mails go through the SendsAppMail concern, as before.
+ * Reply mails go through AppMailService, as before.
  */
-class LessonQnaRepository
+class LessonQnaRepository extends Repository
 {
-    use SendsAppMail;
+    public static function model()
+    {
+        return LessonQuestion::class;
+    }
 
     public static function paginateQuestions(array $filters, int $perPage = 10): LengthAwarePaginator
     {
@@ -71,7 +76,7 @@ class LessonQnaRepository
 
         $question->update(['seen' => true]);
 
-        (new static)->sendQnaReplyMailTrait($question);
+        AppMailService::sendQnaReplyMail($question);
 
         return $reply;
     }

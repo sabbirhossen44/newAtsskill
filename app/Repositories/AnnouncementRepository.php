@@ -2,11 +2,13 @@
 
 namespace App\Repositories;
 
+use Arafat\LaravelRepository\Repository;
+
 use App\Models\Announcement;
 use App\Models\Course;
 use Illuminate\Database\Eloquent\Collection;
 
-class AnnouncementRepository
+class AnnouncementRepository extends Repository
 {
     public static function model()
     {
@@ -15,12 +17,12 @@ class AnnouncementRepository
 
     public static function findById(int $id): ?Announcement
     {
-        return static::model()::query()->find($id);
+        return self::find($id);
     }
 
     public static function findByIdOrFail(string $id): Announcement
     {
-        return static::model()::query()->findOrFail($id);
+        return self::findOrFail($id);
     }
 
     public static function allForInstructor(int $instructorId): Collection
@@ -36,12 +38,12 @@ class AnnouncementRepository
 
     public static function storeByRequest(array $data): Announcement
     {
-        return static::model()::query()->create($data);
+        return self::create($data);
     }
 
     public static function updateByRequest(Announcement $announcement, array $data): bool
     {
-        return $announcement->update($data);
+        return self::update($announcement, $data);
     }
 
     public static function findForInstructorOrFail(string $id, int $instructorId): Announcement
@@ -49,8 +51,12 @@ class AnnouncementRepository
         return static::model()::query()->where('instructor_id', $instructorId)->where('id', $id)->firstOrFail();
     }
 
-    public static function delete(Announcement $announcement): bool
+    public static function delete(mixed $record): bool
     {
-        return (bool) $announcement->delete();
+        if ($record instanceof \Illuminate\Database\Eloquent\Model) {
+            return (bool) $record->delete();
+        }
+
+        return (bool) static::query()->destroy($record);
     }
 }

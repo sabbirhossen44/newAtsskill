@@ -3,13 +3,12 @@
 namespace App\Http\Requests\Admin;
 
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Support\Facades\Auth;
 
 class CounterSectionRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return \Illuminate\Support\Facades\Auth::guard('admin')->check();
+        return true;
     }
 
     public function rules(): array

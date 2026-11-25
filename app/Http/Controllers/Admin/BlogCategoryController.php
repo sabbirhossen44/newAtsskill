@@ -2,9 +2,6 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Enums\RedirectTypeEnum;
-use App\Http\Controllers\Concerns\ChecksAdminPermissions;
-use App\Http\Controllers\Concerns\RedirectsWithMessage;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\BlogCategoryStoreRequest;
 use App\Repositories\BlogCategoryRepository;
@@ -13,12 +10,8 @@ use Illuminate\Pagination\Paginator;
 
 class BlogCategoryController extends Controller
 {
-    use ChecksAdminPermissions;
-    use RedirectsWithMessage;
-
     public function index(Request $request)
     {
-        $this->checkAdminPermission('blog.category.view');
         Paginator::useBootstrap();
         $categories = BlogCategoryRepository::paginateAdmin($request->input('keyword') ?? $request->input('search'), $this->perPage($request));
         return view('admin.blog-category.index', ['categories' => $categories, 'items' => $categories]);
@@ -26,23 +19,20 @@ class BlogCategoryController extends Controller
 
     public function create()
     {
-        $this->checkAdminPermission('blog.category.view');
         return view('admin.blog-category.create', []);
     }
 
     public function store(BlogCategoryStoreRequest $request)
     {
-        $this->checkAdminPermission('blog.category.view');
         $data = $request->validated();
 
         BlogCategoryRepository::storeByRequest($data);
 
-        return $this->redirectWithMessage(RedirectTypeEnum::CREATE->value, 'admin.blog-category.index');
+        return redirect()->route('admin.blog-category.index')->with('success', 'Blog category created successfully.');
     }
 
     public function edit($id)
     {
-        $this->checkAdminPermission('blog.category.view');
         $item = BlogCategoryRepository::findByIdOrFail($id);
         $code = request('code') ?? getSessionLanguage();
                 $languages = \App\Models\Language::all();
@@ -51,38 +41,46 @@ class BlogCategoryController extends Controller
 
     public function update(BlogCategoryStoreRequest $request, $id)
     {
-        $this->checkAdminPermission('blog.category.view');
         $item = BlogCategoryRepository::findByIdOrFail($id);
         $data = $request->validated();
 
         BlogCategoryRepository::updateByRequest($item, $data);
 
-        return $this->redirectWithMessage(RedirectTypeEnum::UPDATE->value, 'admin.blog-category.index');
+        return redirect()->route('admin.blog-category.index')->with('success', 'Blog category updated successfully.');
     }
 
     public function destroy($id)
     {
-        $this->checkAdminPermission('blog.category.view');
         $item = BlogCategoryRepository::findByIdOrFail($id);
 
-        BlogCategoryRepository::delete($item);
+        $item->delete();
 
-        return $this->redirectWithMessage(RedirectTypeEnum::DELETE->value, 'admin.blog-category.index');
+        return redirect()->route('admin.blog-category.index')->with('success', 'Blog category deleted successfully.');
     }
 
     public function statusUpdate(Request $request, $id)
     {
-        $this->checkAdminPermission('blog.category.view');
         $item = BlogCategoryRepository::findByIdOrFail($id);
 
         if ($request->filled('status')) {
             BlogCategoryRepository::updateStatus($item, $request->input('status'));
 
-            return redirect()->back()->with(['messege' => __('Updated Successfully'), 'alert-type' => 'success']);
+            return redirect()->back()->with('success', __('Updated Successfully'));
         }
 
         BlogCategoryRepository::toggleStatus($item);
 
-        return response()->json(['success' => true, 'message' => __('Updated Successfully')]);
+        if ($request->expectsJson()) {
+            return response()->json(['success' => true, 'message' => __('Updated Successfully')]);
+        }
+
+        return back()->with('success', __('Updated Successfully'));
+    }
+
+    private function perPage(Request $request): int
+    {
+        $perPage = (int) $request->input('per_page', 15);
+
+        return in_array($perPage, [10, 25, 50, 100], true) ? $perPage : 15;
     }
 }

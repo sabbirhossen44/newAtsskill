@@ -2,6 +2,8 @@
 
 namespace App\Repositories;
 
+use Arafat\LaravelRepository\Repository;
+
 use App\Models\User;
 
 /**
@@ -10,8 +12,13 @@ use App\Models\User;
  * address / socials writes live in UserRepository; experience and
  * education writes live in their own repositories.
  */
-class InstructorProfileRepository
+class InstructorProfileRepository extends Repository
 {
+    public static function model()
+    {
+        return User::class;
+    }
+
     public static function profileContext(User $user): array
     {
         $experiences = UserExperienceRepository::allForUser($user->id);

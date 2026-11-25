@@ -2,6 +2,8 @@
 
 namespace App\Repositories;
 
+use Arafat\LaravelRepository\Repository;
+
 use Illuminate\Support\Facades\Schema;
 
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -9,7 +11,7 @@ use Illuminate\Pagination\LengthAwarePaginator;
 use App\Models\Testimonial;
 use App\Services\TranslationService;
 
-class TestimonialRepository
+class TestimonialRepository extends Repository
 {
     public static function model()
     {
@@ -47,11 +49,6 @@ class TestimonialRepository
         }
 
         return $updated;
-    }
-
-    public static function delete(Testimonial $record): bool
-    {
-        return (bool) $record->delete();
     }
 
     public static function paginateAdmin(?string $search = null, int $perPage = 15): LengthAwarePaginator

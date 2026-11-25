@@ -50,7 +50,7 @@
                             <a href="{{ route('login') }}" class="ats-topbar-auth"><i class="fas fa-sign-in-alt me-1"></i>{{ __('Login') }}</a>
                             <a href="{{ route('register') }}" class="ats-topbar-auth d-none d-sm-inline"><i class="fas fa-user-plus me-1"></i>{{ __('Register') }}</a>
                         @else
-                            <a href="{{ auth()->user()->role?->value === 'instructor' ? route('instructor.dashboard') : route('student.dashboard') }}" class="ats-topbar-auth"><i class="fas fa-tachometer-alt me-1"></i>{{ __('Dashboard') }}</a>
+                            <a href="{{ enum_value(auth()->user()->role) === 'instructor' ? route('instructor.dashboard') : route('student.dashboard') }}" class="ats-topbar-auth"><i class="fas fa-tachometer-alt me-1"></i>{{ __('Dashboard') }}</a>
                         @endguest
                     </div>
                 </div>
@@ -93,8 +93,8 @@
                                     <img src="{{ \App\Models\Media::resolveUrl(auth()->user()->image) ?? asset('images/placeholder.svg') }}" alt="{{ auth()->user()->name }}" class="rounded-circle">
                                 </a>
                                 <ul class="dropdown-menu dropdown-menu-end">
-                                    <li><a class="dropdown-item" href="{{ auth()->user()->role?->value === 'instructor' ? route('instructor.dashboard') : route('student.dashboard') }}">{{ __('Dashboard') }}</a></li>
-                                    <li><a class="dropdown-item" href="{{ auth()->user()->role?->value === 'instructor' ? route('instructor.setting.index') : route('student.setting.index') }}">{{ __('Profile') }}</a></li>
+                                    <li><a class="dropdown-item" href="{{ enum_value(auth()->user()->role) === 'instructor' ? route('instructor.dashboard') : route('student.dashboard') }}">{{ __('Dashboard') }}</a></li>
+                                    <li><a class="dropdown-item" href="{{ enum_value(auth()->user()->role) === 'instructor' ? route('instructor.setting.index') : route('student.setting.index') }}">{{ __('Profile') }}</a></li>
                                     <li><hr class="dropdown-divider"></li>
                                     <li>
                                         <a class="dropdown-item text-danger" href="{{ route('logout') }}" onclick="event.preventDefault(); document.getElementById('ats-logout-form').submit();">{{ __('Logout') }}</a>
@@ -134,7 +134,7 @@
                 <a href="{{ route('register') }}" class="btn btn-primary flex-fill"><i class="fas fa-user-plus me-1"></i>{{ __('Register') }}</a>
             </div>
         @else
-            <a href="{{ auth()->user()->role?->value === 'instructor' ? route('instructor.dashboard') : route('student.dashboard') }}" class="btn btn-primary w-100 mb-3"><i class="fas fa-tachometer-alt me-1"></i>{{ __('Dashboard') }}</a>
+            <a href="{{ enum_value(auth()->user()->role) === 'instructor' ? route('instructor.dashboard') : route('student.dashboard') }}" class="btn btn-primary w-100 mb-3"><i class="fas fa-tachometer-alt me-1"></i>{{ __('Dashboard') }}</a>
         @endguest
         <form action="{{ route('courses') }}" method="GET" class="mb-3">
             <div class="input-group">

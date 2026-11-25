@@ -2,11 +2,13 @@
 
 namespace App\Repositories;
 
+use Arafat\LaravelRepository\Repository;
+
 use App\Models\LandingPage;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;
 
-class LandingPageRepository
+class LandingPageRepository extends Repository
 {
     public static function model()
     {
@@ -25,7 +27,7 @@ class LandingPageRepository
 
     public static function storeByRequest(array $data, ?UploadedFile $thumbnail = null): LandingPage
     {
-        return static::model()::query()->create([
+        return self::create([
             'title' => $data['title'],
             'slug' => $data['slug'],
             'seo_title' => $data['seo_title'] ?? null,
@@ -37,7 +39,7 @@ class LandingPageRepository
 
     public static function updateByRequest(LandingPage $landingPage, array $data, ?UploadedFile $thumbnail = null): bool
     {
-        return $landingPage->update([
+        return self::update($landingPage, [
             'title' => $data['title'],
             'slug' => $data['slug'],
             'seo_title' => $data['seo_title'] ?? null,
@@ -47,9 +49,13 @@ class LandingPageRepository
         ]);
     }
 
-    public static function delete(LandingPage $landingPage): bool
+    public static function delete(mixed $record): bool
     {
-        return (bool) $landingPage->delete();
+        if ($record instanceof \Illuminate\Database\Eloquent\Model) {
+            return (bool) $record->delete();
+        }
+
+        return (bool) parent::delete($record);
     }
 
     /**

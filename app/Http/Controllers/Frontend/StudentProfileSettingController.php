@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\Frontend;
 
-use App\Enums\RedirectTypeEnum;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Frontend\StudentBioUpdateRequest;
 use App\Http\Requests\Frontend\StudentEducationStoreRequest;
@@ -15,7 +14,6 @@ use App\Repositories\LocationRepository;
 use App\Repositories\UserEducationRepository;
 use App\Repositories\UserExperienceRepository;
 use App\Repositories\UserRepository;
-use App\Http\Controllers\Concerns\RedirectsWithMessage;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
@@ -23,9 +21,7 @@ use Illuminate\View\View;
 
 class StudentProfileSettingController extends Controller
 {
-    use RedirectsWithMessage;
-
-    function index(): View
+    public function index(): View
     {
         // set profile tab
         if (! session('profile_tab')) {
@@ -41,57 +37,57 @@ class StudentProfileSettingController extends Controller
         return view('frontend.student-dashboard.profile.index', compact('user', 'experiences', 'educations', 'states', 'cities'));
     }
 
-    function updateProfile(StudentProfileUpdateRequest $request): RedirectResponse
+    public function updateProfile(StudentProfileUpdateRequest $request): RedirectResponse
     {
         $user = Auth::user();
 
         UserRepository::updateProfileByRequest($user, $request->validated(), $request->file('image'), $request->file('cover'));
 
-        return $this->redirectWithMessage(RedirectTypeEnum::UPDATE->value, 'student.setting.index');
+        return redirect()->route('student.setting.index')->with(['messege' => __('Updated successfully'), 'alert-type' => 'success']);
     }
 
-    function updateBio(StudentBioUpdateRequest $request): RedirectResponse
+    public function updateBio(StudentBioUpdateRequest $request): RedirectResponse
     {
         UserRepository::updateBioByRequest(Auth::user(), $request->validated());
 
-        return $this->redirectWithMessage(RedirectTypeEnum::UPDATE->value, 'student.setting.index');
+        return redirect()->route('student.setting.index')->with(['messege' => __('Updated successfully'), 'alert-type' => 'success']);
     }
 
-    function updatePassword(StudentPasswordUpdateRequest $request): RedirectResponse
+    public function updatePassword(StudentPasswordUpdateRequest $request): RedirectResponse
     {
         UserRepository::updatePassword(Auth::user(), $request->validated()['password']);
 
-        return $this->redirectWithMessage(RedirectTypeEnum::UPDATE->value, 'student.setting.index');
+        return redirect()->route('student.setting.index')->with(['messege' => __('Updated successfully'), 'alert-type' => 'success']);
     }
 
-    function showExperienceModal(): string
+    public function showExperienceModal(): string
     {
         return view('frontend.student-dashboard.profile.modals.experience-modal')->render();
     }
 
-    function storeExperience(StudentExperienceStoreRequest $request): RedirectResponse
+    public function storeExperience(StudentExperienceStoreRequest $request): RedirectResponse
     {
         UserExperienceRepository::storeByRequest(Auth::user()->id, $request->validated());
 
-        return $this->redirectWithMessage(RedirectTypeEnum::CREATE->value, 'student.setting.index');
+        return redirect()->route('student.setting.index')->with(['messege' => __('Created successfully'), 'alert-type' => 'success']);
     }
 
-    function editExperienceModal(string $id): string
+    public function editExperienceModal(string $id): string
     {
         $experience = UserExperienceRepository::findById((int) $id);
 
         return view('frontend.student-dashboard.profile.modals.edit-experience-modal', compact('experience'))->render();
     }
 
-    function updateExperience(StudentExperienceStoreRequest $request, string $id): RedirectResponse
+    public function updateExperience(StudentExperienceStoreRequest $request, string $id): RedirectResponse
     {
         $experience = UserExperienceRepository::findForUserOrFail((int) $id, Auth::user()->id);
         UserExperienceRepository::updateByRequest($experience, $request->validated());
 
-        return $this->redirectWithMessage(RedirectTypeEnum::UPDATE->value, 'student.setting.index');
+        return redirect()->route('student.setting.index')->with(['messege' => __('Updated successfully'), 'alert-type' => 'success']);
     }
 
-    function destroyExperience(string $id): JsonResponse
+    public function destroyExperience(string $id): JsonResponse
     {
         setFormTabStep('profile_tab', 'education');
 
@@ -103,34 +99,34 @@ class StudentProfileSettingController extends Controller
         ]);
     }
 
-    function addEducationModal(): string
+    public function addEducationModal(): string
     {
         return view('frontend.student-dashboard.profile.modals.add-education-modal')->render();
     }
 
-    function storeEducation(StudentEducationStoreRequest $request): RedirectResponse
+    public function storeEducation(StudentEducationStoreRequest $request): RedirectResponse
     {
         UserEducationRepository::storeByRequest(Auth::user()->id, $request->validated());
 
-        return $this->redirectWithMessage(RedirectTypeEnum::CREATE->value, 'student.setting.index');
+        return redirect()->route('student.setting.index')->with(['messege' => __('Created successfully'), 'alert-type' => 'success']);
     }
 
-    function editEducationModal(string $id): string
+    public function editEducationModal(string $id): string
     {
         $education = UserEducationRepository::findById((int) $id);
 
         return view('frontend.student-dashboard.profile.modals.edit-education-modal', compact('education'))->render();
     }
 
-    function updateEducation(StudentEducationStoreRequest $request, string $id): RedirectResponse
+    public function updateEducation(StudentEducationStoreRequest $request, string $id): RedirectResponse
     {
         $education = UserEducationRepository::findForUserOrFail((int) $id, Auth::user()->id);
         UserEducationRepository::updateByRequest($education, $request->validated());
 
-        return $this->redirectWithMessage(RedirectTypeEnum::UPDATE->value, 'student.setting.index');
+        return redirect()->route('student.setting.index')->with(['messege' => __('Updated successfully'), 'alert-type' => 'success']);
     }
 
-    function destroyEducation(string $id): JsonResponse
+    public function destroyEducation(string $id): JsonResponse
     {
         setFormTabStep('profile_tab', 'education');
 
@@ -142,17 +138,17 @@ class StudentProfileSettingController extends Controller
         ]);
     }
 
-    function updateAddress(StudentProfileAddressUpdateRequest $request): RedirectResponse
+    public function updateAddress(StudentProfileAddressUpdateRequest $request): RedirectResponse
     {
         UserRepository::updateAddressByRequest(Auth::user(), $request->validated());
 
-        return $this->redirectWithMessage(RedirectTypeEnum::UPDATE->value, 'student.setting.index');
+        return redirect()->route('student.setting.index')->with(['messege' => __('Updated successfully'), 'alert-type' => 'success']);
     }
 
-    function updateSocials(StudentProfileSocialUpdateRequest $request): RedirectResponse
+    public function updateSocials(StudentProfileSocialUpdateRequest $request): RedirectResponse
     {
         UserRepository::updateSocialsByRequest(Auth::user(), $request->validated());
 
-        return $this->redirectWithMessage(RedirectTypeEnum::UPDATE->value, 'student.setting.index');
+        return redirect()->route('student.setting.index')->with(['messege' => __('Updated successfully'), 'alert-type' => 'success']);
     }
 }

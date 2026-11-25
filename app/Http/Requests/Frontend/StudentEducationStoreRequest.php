@@ -6,6 +6,11 @@ use Illuminate\Foundation\Http\FormRequest;
 
 class StudentEducationStoreRequest extends FormRequest
 {
+    public function authorize(): bool
+    {
+        return true;
+    }
+
 
     function __construct()
     {

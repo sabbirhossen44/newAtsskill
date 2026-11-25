@@ -14,7 +14,7 @@ use Illuminate\Http\Request;
 
 class CourseContentController extends Controller
 {
-    function chapterStore(ChapterStoreRequest $request, string $courseId): RedirectResponse
+    public function chapterStore(ChapterStoreRequest $request, string $courseId): RedirectResponse
     {
         CourseChapterRepository::storeByRequest([
             'title' => $request->title,
@@ -26,14 +26,14 @@ class CourseContentController extends Controller
         return redirect()->back()->with(['messege' => __('Chapter created successfully'), 'alert-type' => 'success']);
     }
 
-    function chapterEdit(string $chapterId)
+    public function chapterEdit(string $chapterId)
     {
         $chapter = CourseChapterRepository::findById($chapterId);
 
         return view('frontend.instructor-dashboard.course.partials.edit-section-modal', compact('chapter'))->render();
     }
 
-    function chapterUpdate(Request $request, string $chapterId)
+    public function chapterUpdate(Request $request, string $chapterId)
     {
         $chapter = CourseChapterRepository::findByIdOrFail($chapterId);
         abort_if($chapter->instructor_id != auth('web')->user()->id, 403, __('unauthorized access'));
@@ -42,7 +42,7 @@ class CourseContentController extends Controller
         return redirect()->back()->with(['messege' => __('Updated successfully'), 'alert-type' => 'success']);
     }
 
-    function chapterDestroy(string $chapterId)
+    public function chapterDestroy(string $chapterId)
     {
         $chapter = CourseChapterRepository::findByIdOrFail($chapterId);
         abort_if($chapter->instructor_id != auth('web')->user()->id, 403, __('unauthorized access'));
@@ -51,21 +51,21 @@ class CourseContentController extends Controller
         return response()->json(['status' => 'success', 'message' => __('Question deleted successfully')]);
     }
 
-    function chapterSorting(string $courseId)
+    public function chapterSorting(string $courseId)
     {
         $chapters = CourseChapterRepository::orderedForCourse($courseId);
 
         return view('frontend.instructor-dashboard.course.partials.chapter-sorting-index', compact('chapters', 'courseId'))->render();
     }
 
-    function chapterSortingStore(Request $request, string $courseId)
+    public function chapterSortingStore(Request $request, string $courseId)
     {
         CourseChapterRepository::updateOrder($courseId, $request->chapter_ids);
 
         return redirect()->back()->with(['messege' => __('Updated successfully'), 'alert-type' => 'success']);
     }
 
-    function lessonCreate(Request $request)
+    public function lessonCreate(Request $request)
     {
         $courseId = $request->courseId;
         $chapterId = $request->chapterId;
@@ -102,14 +102,14 @@ class CourseContentController extends Controller
         }
     }
 
-    function lessonStore(ChapterLessonRequest $request)
+    public function lessonStore(ChapterLessonRequest $request)
     {
         CourseContentRepository::storeLesson($request->validated(), auth('web')->id());
 
         return response()->json(['status' => 'success', 'message' => __('Lesson created successfully')]);
     }
 
-    function lessonEdit(Request $request)
+    public function lessonEdit(Request $request)
     {
         $courseId = $request->courseId;
         $chapterItemId = $request->chapterItemId;
@@ -143,7 +143,7 @@ class CourseContentController extends Controller
         }
     }
 
-    function lessonUpdate(ChapterLessonRequest $request)
+    public function lessonUpdate(ChapterLessonRequest $request)
     {
         $chapterItem = CourseContentRepository::findChapterItemOrFail($request->chapter_item_id);
         abort_if($chapterItem->instructor_id != auth('web')->user()->id, 403, __('unauthorized access'));
@@ -152,14 +152,14 @@ class CourseContentController extends Controller
         return response()->json(['status' => 'success', 'message' => __('Lesson updated successfully')]);
     }
 
-    function sortLessons(Request $request, string $chapterId)
+    public function sortLessons(Request $request, string $chapterId)
     {
         CourseContentRepository::sortLessons($chapterId, $request->orderIds);
 
         return response()->json(['status' => 'success', 'message' => __('Lesson sorted successfully')]);
     }
 
-    function chapterLessonDestroy(string $chapterItemId)
+    public function chapterLessonDestroy(string $chapterItemId)
     {
         $chapterItem = CourseContentRepository::findChapterItemOrFail($chapterItemId);
         abort_if($chapterItem->instructor_id != auth('web')->user()->id, 403, __('unauthorized access'));
@@ -168,26 +168,26 @@ class CourseContentController extends Controller
         return response()->json(['status' => 'success', 'message' => __('Lesson deleted successfully')]);
     }
 
-    function createQuizQuestion(string $quizId)
+    public function createQuizQuestion(string $quizId)
     {
         return view('frontend.instructor-dashboard.course.partials.quiz-question-create-modal', ['quizId' => $quizId])->render();
     }
 
-    function storeQuizQuestion(QuizQuestionRequest $request, string $quizId)
+    public function storeQuizQuestion(QuizQuestionRequest $request, string $quizId)
     {
         QuizQuestionRepository::storeByRequest($quizId, $request->validated());
 
         return response()->json(['status' => 'success', 'message' => __('Question created successfully')]);
     }
 
-    function editQuizQuestion(string $questionId)
+    public function editQuizQuestion(string $questionId)
     {
         $question = QuizQuestionRepository::findByIdOrFail($questionId);
 
         return view('frontend.instructor-dashboard.course.partials.quiz-question-edit-modal', ['question' => $question])->render();
     }
 
-    function updateQuizQuestion(QuizQuestionRequest $request, string $questionId)
+    public function updateQuizQuestion(QuizQuestionRequest $request, string $questionId)
     {
         $question = QuizQuestionRepository::findByIdOrFail($questionId);
         QuizQuestionRepository::updateByRequest($question, $request->validated());
@@ -195,7 +195,7 @@ class CourseContentController extends Controller
         return response()->json(['status' => 'success', 'message' => __('Question updated successfully')]);
     }
 
-    function destroyQuizQuestion(string $questionId)
+    public function destroyQuizQuestion(string $questionId)
     {
         $question = QuizQuestionRepository::findByIdOrFail($questionId);
         QuizQuestionRepository::destroy($question);

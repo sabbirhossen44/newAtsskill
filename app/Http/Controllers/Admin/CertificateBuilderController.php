@@ -2,9 +2,6 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Enums\RedirectTypeEnum;
-use App\Http\Controllers\Concerns\ChecksAdminPermissions;
-use App\Http\Controllers\Concerns\RedirectsWithMessage;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\CertificateUpdateRequest;
 use App\Repositories\CertificateBuilderRepository;
@@ -14,12 +11,8 @@ use Illuminate\Pagination\Paginator;
 
 class CertificateBuilderController extends Controller
 {
-    use ChecksAdminPermissions;
-    use RedirectsWithMessage;
-
     public function index(Request $request)
     {
-        $this->checkAdminPermission('course.certificate.management');
         Paginator::useBootstrap();
         $certificates = CertificateBuilderRepository::paginateAdmin($request->input('keyword') ?? $request->input('search'), $this->perPage($request));
         $certificate = \App\Repositories\CertificateBuilderRepository::findById(1);
@@ -29,13 +22,11 @@ class CertificateBuilderController extends Controller
 
     public function create()
     {
-        $this->checkAdminPermission('course.certificate.management');
         return view('admin.certificate-builder.create', []);
     }
 
     public function store(CertificateUpdateRequest $request)
     {
-        $this->checkAdminPermission('course.certificate.management');
         $data = $request->validated();
         unset($data['status'], $data['background_image']);
         if ($request->hasFile('background_image')) {
@@ -47,19 +38,17 @@ class CertificateBuilderController extends Controller
 
         CertificateBuilderRepository::storeByRequest($data);
 
-        return $this->redirectWithMessage(RedirectTypeEnum::CREATE->value, 'admin.certificate-builder.index');
+        return redirect()->route('admin.certificate-builder.index')->with('success', 'Certificate created successfully.');
     }
 
     public function edit($id)
     {
-        $this->checkAdminPermission('course.certificate.management');
         $item = CertificateBuilderRepository::findByIdOrFail($id);
         return view('admin.certificate-builder.edit', ['item' => $item, 'certificate' => $item]);
     }
 
     public function update(CertificateUpdateRequest $request, $id)
     {
-        $this->checkAdminPermission('course.certificate.management');
         $item = CertificateBuilderRepository::findByIdOrFail($id);
         $data = $request->validated();
         unset($data['status'], $data['background_image']);
@@ -72,16 +61,22 @@ class CertificateBuilderController extends Controller
 
         CertificateBuilderRepository::updateByRequest($item, $data);
 
-        return $this->redirectWithMessage(RedirectTypeEnum::UPDATE->value, 'admin.certificate-builder.index');
+        return redirect()->route('admin.certificate-builder.index')->with('success', 'Certificate updated successfully.');
     }
 
     public function destroy($id)
     {
-        $this->checkAdminPermission('course.certificate.management');
         $item = CertificateBuilderRepository::findByIdOrFail($id);
 
-        CertificateBuilderRepository::delete($item);
+        $item->delete();
 
-        return $this->redirectWithMessage(RedirectTypeEnum::DELETE->value, 'admin.certificate-builder.index');
+        return redirect()->route('admin.certificate-builder.index')->with('success', 'Certificate deleted successfully.');
+    }
+
+    private function perPage(Request $request): int
+    {
+        $perPage = (int) $request->input('per_page', 15);
+
+        return in_array($perPage, [10, 25, 50, 100], true) ? $perPage : 15;
     }
 }

@@ -8,21 +8,21 @@ use App\Repositories\WithdrawRepository;
 
 class InstructorPayoutController extends Controller
 {
-    function index()
+    public function index()
     {
         $data = WithdrawRepository::payoutIndexData(auth('web')->user()->id);
 
         return view('frontend.instructor-dashboard.payout.index', $data);
     }
 
-    function create()
+    public function create()
     {
         $data = WithdrawRepository::payoutCreateData(auth('web')->user()->id);
 
         return view('frontend.instructor-dashboard.payout.create', $data);
     }
 
-    function store(PayoutStoreRequest $request)
+    public function store(PayoutStoreRequest $request)
     {
         $user = auth('web')->user();
 
@@ -35,7 +35,7 @@ class InstructorPayoutController extends Controller
         return redirect()->route('instructor.payout.index')->with(['alert-type' => 'success', 'messege' => __('Payout request sent successfully.')]);
     }
 
-    function destroy(string $id)
+    public function destroy(string $id)
     {
         if (WithdrawRepository::deletePending($id, auth('web')->user()->id)) {
             return response(['status' => 'success', 'message' => __('Deleted Successfully')]);

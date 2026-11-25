@@ -2,9 +2,6 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Enums\RedirectTypeEnum;
-use App\Http\Controllers\Concerns\ChecksAdminPermissions;
-use App\Http\Controllers\Concerns\RedirectsWithMessage;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\CourseCategoryStoreRequest;
 use App\Http\Requests\Admin\CourseCategoryUpdateRequest;
@@ -15,12 +12,8 @@ use Illuminate\Pagination\Paginator;
 
 class CourseCategoryController extends Controller
 {
-    use ChecksAdminPermissions;
-    use RedirectsWithMessage;
-
     public function index(Request $request)
     {
-        $this->checkAdminPermission('course.management');
         Paginator::useBootstrap();
         $categories = CourseCategoryRepository::paginateAdmin($request->input('keyword') ?? $request->input('search'), $this->perPage($request));
         return view('admin.course-category.index', ['categories' => $categories, 'items' => $categories]);
@@ -28,14 +21,12 @@ class CourseCategoryController extends Controller
 
     public function create()
     {
-        $this->checkAdminPermission('course.management');
         $parentCategories = \App\Models\CourseCategory::whereNull('parent_id')->get();
         return view('admin.course-category.create', ['parentCategories' => $parentCategories]);
     }
 
     public function store(CourseCategoryStoreRequest $request)
     {
-        $this->checkAdminPermission('course.management');
         $data = $request->validated();
         if ($request->hasFile('icon')) {
             $data['icon'] = UploadService::store($request->file('icon'));
@@ -43,12 +34,11 @@ class CourseCategoryController extends Controller
 
         CourseCategoryRepository::storeByRequest($data);
 
-        return $this->redirectWithMessage(RedirectTypeEnum::CREATE->value, 'admin.course-category.index');
+        return redirect()->route('admin.course-category.index')->with('success', 'Course category created successfully.');
     }
 
     public function edit($id)
     {
-        $this->checkAdminPermission('course.management');
         $item = CourseCategoryRepository::findByIdOrFail($id);
         $code = request('code') ?? getSessionLanguage();
                 $languages = \App\Models\Language::all();
@@ -58,7 +48,6 @@ class CourseCategoryController extends Controller
 
     public function update(CourseCategoryUpdateRequest $request, $id)
     {
-        $this->checkAdminPermission('course.management');
         $item = CourseCategoryRepository::findByIdOrFail($id);
         $data = $request->validated();
         if ($request->hasFile('icon')) {
@@ -67,32 +56,41 @@ class CourseCategoryController extends Controller
 
         CourseCategoryRepository::updateByRequest($item, $data);
 
-        return $this->redirectWithMessage(RedirectTypeEnum::UPDATE->value, 'admin.course-category.index');
+        return redirect()->route('admin.course-category.index')->with('success', 'Course category updated successfully.');
     }
 
     public function destroy($id)
     {
-        $this->checkAdminPermission('course.management');
         $item = CourseCategoryRepository::findByIdOrFail($id);
 
-        CourseCategoryRepository::delete($item);
+        $item->delete();
 
-        return $this->redirectWithMessage(RedirectTypeEnum::DELETE->value, 'admin.course-category.index');
+        return redirect()->route('admin.course-category.index')->with('success', 'Course category deleted successfully.');
     }
 
     public function statusUpdate(Request $request, $id)
     {
-        $this->checkAdminPermission('course.management');
         $item = CourseCategoryRepository::findByIdOrFail($id);
 
         if ($request->filled('status')) {
             CourseCategoryRepository::updateStatus($item, $request->input('status'));
 
-            return redirect()->back()->with(['messege' => __('Updated Successfully'), 'alert-type' => 'success']);
+            return redirect()->back()->with('success', __('Updated Successfully'));
         }
 
         CourseCategoryRepository::toggleStatus($item);
 
-        return response()->json(['success' => true, 'message' => __('Updated Successfully')]);
+        if ($request->expectsJson()) {
+            return response()->json(['success' => true, 'message' => __('Updated Successfully')]);
+        }
+
+        return back()->with('success', __('Updated Successfully'));
+    }
+
+    private function perPage(Request $request): int
+    {
+        $perPage = (int) $request->input('per_page', 15);
+
+        return in_array($perPage, [10, 25, 50, 100], true) ? $perPage : 15;
     }
 }

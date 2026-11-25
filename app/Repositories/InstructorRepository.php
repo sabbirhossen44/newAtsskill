@@ -2,12 +2,14 @@
 
 namespace App\Repositories;
 
+use Arafat\LaravelRepository\Repository;
+
 use App\Models\Instructor;
 use App\Services\UploadService;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\UploadedFile;
 
-class InstructorRepository
+class InstructorRepository extends Repository
 {
     public static function model()
     {
@@ -16,12 +18,12 @@ class InstructorRepository
 
     public static function findById(int $id): ?Instructor
     {
-        return static::model()::query()->find($id);
+        return self::find($id);
     }
 
     public static function findByIdOrFail(int $id): Instructor
     {
-        return static::model()::query()->findOrFail($id);
+        return self::findOrFail($id);
     }
 
     /** Active instructors, newest first (old InstructorController::getActiveInstructors). */
@@ -65,7 +67,7 @@ class InstructorRepository
             $data['image'] = static::storeImage($image);
         }
 
-        $record = static::model()::query()->create($data);
+        $record = self::create($data);
 
         return $record->fresh();
     }
@@ -87,11 +89,21 @@ class InstructorRepository
         return $updated;
     }
 
-    public static function delete(Instructor $record): bool
+    public static function delete(mixed $record): bool
     {
-        UploadService::delete($record->image);
+        if ($record instanceof \Illuminate\Database\Eloquent\Model) {
+            UploadService::delete($record->image);
 
-        return (bool) $record->delete();
+            return (bool) $record->delete();
+        }
+
+        $instructor = static::query()->find($record);
+
+        if ($instructor) {
+            UploadService::delete($instructor->image);
+        }
+
+        return (bool) static::query()->destroy($record);
     }
 
     public static function updateStatus(Instructor $record, mixed $status): bool

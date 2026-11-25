@@ -2,10 +2,12 @@
 
 namespace App\Repositories;
 
+use Arafat\LaravelRepository\Repository;
+
 use App\Models\Setting;
 use App\Services\SettingService;
 
-class SettingRepository
+class SettingRepository extends Repository
 {
     public static function model()
     {

@@ -2,9 +2,6 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Enums\RedirectTypeEnum;
-use App\Http\Controllers\Concerns\ChecksAdminPermissions;
-use App\Http\Controllers\Concerns\RedirectsWithMessage;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\FeaturedCourseSectionRequest;
 use App\Repositories\FeaturedCourseSectionRepository;
@@ -13,12 +10,8 @@ use Illuminate\Pagination\Paginator;
 
 class FeaturedCourseSectionController extends Controller
 {
-    use ChecksAdminPermissions;
-    use RedirectsWithMessage;
-
     public function index(Request $request)
     {
-        $this->checkAdminPermission('section.management');
         Paginator::useBootstrap();
         $sections = FeaturedCourseSectionRepository::paginateAdmin($request->input('keyword') ?? $request->input('search'), $this->perPage($request));
         return view('admin.featured-course-section.index', ['sections' => $sections, 'items' => $sections]);
@@ -26,47 +19,49 @@ class FeaturedCourseSectionController extends Controller
 
     public function create()
     {
-        $this->checkAdminPermission('section.management');
         return view('admin.featured-course-section.create', []);
     }
 
     public function store(FeaturedCourseSectionRequest $request)
     {
-        $this->checkAdminPermission('section.management');
         $data = $request->validated();
         foreach (['all_category_ids', 'category_one_ids', 'category_two_ids', 'category_three_ids', 'category_four_ids', 'category_five_ids'] as $key) { if (isset($data[$key])) { $data[$key] = json_encode($data[$key]); } }
 
         FeaturedCourseSectionRepository::storeByRequest($data);
 
-        return $this->redirectWithMessage(RedirectTypeEnum::CREATE->value, 'admin.featured-course-section.index');
+        return redirect()->route('admin.featured-course-section.index')->with('success', 'Featured course section created successfully.');
     }
 
     public function edit($id)
     {
-        $this->checkAdminPermission('section.management');
         $item = FeaturedCourseSectionRepository::findByIdOrFail($id);
         return view('admin.featured-course-section.edit', ['item' => $item, 'section' => $item]);
     }
 
     public function update(FeaturedCourseSectionRequest $request, $id)
     {
-        $this->checkAdminPermission('section.management');
         $item = FeaturedCourseSectionRepository::findByIdOrFail($id);
         $data = $request->validated();
         foreach (['all_category_ids', 'category_one_ids', 'category_two_ids', 'category_three_ids', 'category_four_ids', 'category_five_ids'] as $key) { if (isset($data[$key])) { $data[$key] = json_encode($data[$key]); } }
 
         FeaturedCourseSectionRepository::updateByRequest($item, $data);
 
-        return $this->redirectWithMessage(RedirectTypeEnum::UPDATE->value, 'admin.featured-course-section.index');
+        return redirect()->route('admin.featured-course-section.index')->with('success', 'Featured course section updated successfully.');
     }
 
     public function destroy($id)
     {
-        $this->checkAdminPermission('section.management');
         $item = FeaturedCourseSectionRepository::findByIdOrFail($id);
 
-        FeaturedCourseSectionRepository::delete($item);
+        $item->delete();
 
-        return $this->redirectWithMessage(RedirectTypeEnum::DELETE->value, 'admin.featured-course-section.index');
+        return redirect()->route('admin.featured-course-section.index')->with('success', 'Featured course section deleted successfully.');
+    }
+
+    private function perPage(Request $request): int
+    {
+        $perPage = (int) $request->input('per_page', 15);
+
+        return in_array($perPage, [10, 25, 50, 100], true) ? $perPage : 15;
     }
 }

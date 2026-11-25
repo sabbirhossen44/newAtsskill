@@ -6,7 +6,6 @@ use App\Enums\UserBannedEnum;
 use App\Enums\UserRoleEnum;
 use App\Enums\UserStatusEnum;
 use App\Http\Controllers\Controller;
-use App\Http\Controllers\Concerns\ChecksAdminPermissions;
 use App\Models\City;
 use App\Models\State;
 use App\Repositories\UserEducationRepository;
@@ -23,8 +22,6 @@ use Illuminate\Pagination\Paginator;
  */
 class CustomerController extends Controller
 {
-    use ChecksAdminPermissions;
-
     protected function paginateCustomers(Request $request, $query)
     {
         Paginator::useBootstrap();
@@ -35,7 +32,6 @@ class CustomerController extends Controller
 
     public function index(Request $request)
     {
-        $this->checkAdminPermission('customer.view');
         $customers = $this->paginateCustomers($request, \App\Models\User::query());
 
         return view('admin.customer.index', compact('customers'));
@@ -43,7 +39,6 @@ class CustomerController extends Controller
 
     public function active_customer(Request $request)
     {
-        $this->checkAdminPermission('customer.view');
         $customers = $this->paginateCustomers($request, \App\Models\User::query()->where('status', UserStatusEnum::ACTIVE->value));
 
         return view('admin.customer.index', compact('customers'));
@@ -51,7 +46,6 @@ class CustomerController extends Controller
 
     public function non_verified_customers(Request $request)
     {
-        $this->checkAdminPermission('customer.view');
         $customers = $this->paginateCustomers($request, \App\Models\User::query()->whereNull('email_verified_at'));
 
         return view('admin.customer.index', compact('customers'));
@@ -59,7 +53,6 @@ class CustomerController extends Controller
 
     public function banned_customers(Request $request)
     {
-        $this->checkAdminPermission('customer.view');
         $customers = $this->paginateCustomers($request, \App\Models\User::query()->where('is_banned', UserBannedEnum::YES->value));
 
         return view('admin.customer.index', compact('customers'));
@@ -67,7 +60,6 @@ class CustomerController extends Controller
 
     public function show($id)
     {
-        $this->checkAdminPermission('customer.view');
         $user = UserRepository::findOrFail($id);
         $item = $user;
         $experiences = UserExperienceRepository::allForUser($user->id);
@@ -81,10 +73,16 @@ class CustomerController extends Controller
 
     public function destroy($id)
     {
-        $this->checkAdminPermission('customer.delete');
         $user = UserRepository::findOrFail($id);
         $user->delete();
 
-        return redirect()->route('admin.all-customers')->with(['messege' => __('Deleted Successfully'), 'alert-type' => 'success']);
+        return redirect()->route('admin.all-customers')->with('success', __('Deleted Successfully'));
+    }
+
+    private function perPage(Request $request): int
+    {
+        $perPage = (int) $request->input('per_page', 15);
+
+        return in_array($perPage, [10, 25, 50, 100], true) ? $perPage : 15;
     }
 }

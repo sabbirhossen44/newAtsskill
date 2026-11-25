@@ -25,9 +25,7 @@ class InstructorController extends Controller
     {
         InstructorRepository::storeByRequest($request->validated(), $request->file('image'));
 
-        $notification = ['messege' => 'Instructor added successfully!', 'alert-type' => 'success'];
-
-        return redirect()->route('admin.instructors.index')->with($notification);
+        return redirect()->route('admin.instructors.index')->with('success', 'Instructor added successfully!');
     }
 
     public function show($id)
@@ -50,9 +48,7 @@ class InstructorController extends Controller
 
         InstructorRepository::updateByRequest($instructors, $request->validated(), $request->file('image'));
 
-        $notification = ['messege' => 'Updated Successfully', 'alert-type' => 'success'];
-
-        return redirect()->route('admin.instructors.index')->with($notification);
+        return redirect()->route('admin.instructors.index')->with('success', 'Updated Successfully');
     }
 
     public function destroy($id)
@@ -61,9 +57,7 @@ class InstructorController extends Controller
 
         InstructorRepository::delete($instructors);
 
-        $notification = ['messege' => 'Deleted Successfully', 'alert-type' => 'success'];
-
-        return redirect()->route('admin.instructors.index')->with($notification);
+        return redirect()->route('admin.instructors.index')->with('success', 'Deleted Successfully');
     }
 
     public function statusUpdate(Request $request, $id)
@@ -72,6 +66,17 @@ class InstructorController extends Controller
 
         InstructorRepository::updateStatus($instructors, $request->input('status'));
 
-        return response()->json(['success' => true, 'message' => 'Status updated successfully!']);
+        if ($request->expectsJson()) {
+            return response()->json(['success' => true, 'message' => 'Status updated successfully!']);
+        }
+
+        return back()->with('success', 'Status updated successfully!');
+    }
+
+    private function perPage(Request $request): int
+    {
+        $perPage = (int) $request->input('per_page', 15);
+
+        return in_array($perPage, [10, 25, 50, 100], true) ? $perPage : 15;
     }
 }

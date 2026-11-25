@@ -2,140 +2,104 @@
 
 namespace App\Http\Controllers\Auth;
 
-use App\Enums\SocialiteDriverEnum;
-use App\Enums\UserBannedEnum;
-use App\Enums\UserStatusEnum;
 use App\Http\Controllers\Controller;
 use App\Repositories\SocialiteCredentialRepository;
 use App\Repositories\UserRepository;
-use App\Http\Controllers\Concerns\CreatesSocialUser;
-use App\Http\Controllers\Concerns\SetsSocialiteConfig;
-use Illuminate\Support\Facades\Auth;
-use Laravel\Socialite\Facades\Socialite;
+use App\Services\SocialiteService;
+use Illuminate\Http\RedirectResponse;
 
+/**
+ * Social login (allSolution style: thin controller, config + user
+ * creation in SocialiteService). Status / banned are compared as
+ * plain strings (spec §5: no enum casts); the BackedEnum unwrap keeps
+ * the checks correct while the model still casts those columns.
+ */
 class SocialiteController extends Controller
 {
-    use CreatesSocialUser, SetsSocialiteConfig;
-
-    public function __construct()
+    public function redirectToDriver($driver): RedirectResponse
     {
-        $driver = request('driver', null);
-        if ($driver == SocialiteDriverEnum::FACEBOOK->value) {
-            self::setFacebookLoginInfo();
-        } elseif ($driver == SocialiteDriverEnum::GOOGLE->value) {
-            self::setGoogleLoginInfo();
+        if (! in_array($driver, ['facebook', 'google'], true)) {
+            return redirect()->back()->with([
+                'messege' => __('Invalid Social Login Type!'),
+                'alert-type' => 'error',
+            ]);
         }
+
+        SocialiteService::configureDriver($driver);
+
+        return \Laravel\Socialite\Facades\Socialite::driver($driver)->redirect();
     }
 
-    public function redirectToDriver($driver)
+    public function handleDriverCallback($driver): RedirectResponse
     {
-        if (in_array($driver, SocialiteDriverEnum::getAll())) {
-            return Socialite::driver($driver)->redirect();
+        if (! in_array($driver, ['facebook', 'google'], true)) {
+            return redirect()->back()->with([
+                'messege' => __('Invalid Social Login Type!'),
+                'alert-type' => 'error',
+            ]);
         }
-        $notification = __('Invalid Social Login Type!');
-        $notification = ['messege' => $notification, 'alert-type' => 'error'];
 
-        return redirect()->back()->with($notification);
-    }
-
-    public function handleDriverCallback($driver)
-    {
-        if (! in_array($driver, SocialiteDriverEnum::getAll())) {
-            $notification = __('Invalid Social Login Type!');
-            $notification = ['messege' => $notification, 'alert-type' => 'error'];
-
-            return redirect()->back()->with($notification);
-        }
         try {
-            $provider_name = SocialiteDriverEnum::from($driver)->value;
-            $callbackUser = Socialite::driver($provider_name)->stateless()->user();
+            SocialiteService::configureDriver($driver);
+
+            $callbackUser = \Laravel\Socialite\Facades\Socialite::driver($driver)->stateless()->user();
             $user = UserRepository::findByEmail($callbackUser->getEmail());
+
             if ($user) {
-                $findDriver = SocialiteCredentialRepository::findForUser($user->id, $provider_name, $callbackUser->getId());
+                $status = $user->status instanceof \BackedEnum ? $user->status->value : $user->status;
+                $isBanned = $user->is_banned instanceof \BackedEnum ? $user->is_banned->value : $user->is_banned;
 
-                if ($findDriver) {
-                    if ($user->status === UserStatusEnum::ACTIVE) {
-                        if ($user->is_banned === UserBannedEnum::NO) {
-                            if (app()->isProduction() && $user->email_verified_at == null) {
-                                $notification = __('Please verify your email');
-                                $notification = ['messege' => $notification, 'alert-type' => 'error'];
-
-                                return redirect()
-                                    ->back()
-                                    ->with($notification);
-                            }
-                            if ($findDriver) {
-                                Auth::guard('web')->login($user, true);
-                                $notification = __('Logged in successfully.');
-                                $notification = ['messege' => $notification, 'alert-type' => 'success'];
-
-                                return redirect()
-                                    ->intended(route('student.dashboard'))
-                                    ->with($notification);
-                            }
-                        } else {
-                            $notification = __('Inactive account');
-                            $notification = ['messege' => $notification, 'alert-type' => 'error'];
-
-                            return redirect()
-                                ->back()
-                                ->with($notification);
-                        }
-                    } else {
-                        $notification = __('Inactive account');
-                        $notification = ['messege' => $notification, 'alert-type' => 'error'];
-
-                        return redirect()
-                            ->back()
-                            ->with($notification);
-                    }
-                } else {
-                    $socialite = $this->createNewUser(callbackUser: $callbackUser, provider_name: $provider_name, user: $user);
-
-                    if ($socialite) {
-                        Auth::guard('web')->login($user, true);
-                        $notification = __('Logged in successfully.');
-                        $notification = ['messege' => $notification, 'alert-type' => 'success'];
-
-                        return redirect()
-                            ->intended(route('user.dashboard'))
-                            ->with($notification);
-                    }
-
-                    $notification = __('Login Failed');
-                    $notification = ['messege' => $notification, 'alert-type' => 'error'];
-
-                    return redirect()
-                        ->back()
-                        ->with($notification);
-                }
-            } else {
-                if ($callbackUser) {
-                    $socialite = $this->createNewUser(callbackUser: $callbackUser, provider_name: $provider_name, user: false);
-                    if ($socialite) {
-                        $user = UserRepository::findById($socialite->user_id);
-                        Auth::guard('web')->login($user, true);
-                        $notification = __('Logged in successfully.');
-                        $notification = ['messege' => $notification, 'alert-type' => 'success'];
-
-                        return redirect()
-                            ->intended(route('student.dashboard'))
-                            ->with($notification);
-                    }
-
-                    $notification = __('Login Failed');
-                    $notification = ['messege' => $notification, 'alert-type' => 'error'];
-
-                    return redirect()
-                        ->back()
-                        ->with($notification);
+                if ($status !== 'active' || $isBanned !== 'no') {
+                    return redirect()->back()->with([
+                        'messege' => __('Inactive account'),
+                        'alert-type' => 'error',
+                    ]);
                 }
 
-                $notification = __('Login Failed');
-                $notification = ['messege' => $notification, 'alert-type' => 'error'];
+                if (app()->isProduction() && $user->email_verified_at === null) {
+                    return redirect()->back()->with([
+                        'messege' => __('Please verify your email'),
+                        'alert-type' => 'error',
+                    ]);
+                }
 
-                return redirect()->back()->with($notification);
+                $findDriver = SocialiteCredentialRepository::findForUser($user->id, $driver, $callbackUser->getId());
+
+                if (! $findDriver) {
+                    $socialite = SocialiteService::createSocialUser($callbackUser, $driver, $user);
+
+                    if (! $socialite) {
+                        return redirect()->back()->with([
+                            'messege' => __('Login Failed'),
+                            'alert-type' => 'error',
+                        ]);
+                    }
+                }
+
+                auth('web')->login($user, true);
+
+                return redirect()->intended(route('student.dashboard'))->with([
+                    'messege' => __('Logged in successfully.'),
+                    'alert-type' => 'success',
+                ]);
             }
+
+            $socialite = SocialiteService::createSocialUser($callbackUser, $driver, false);
+
+            if (! $socialite) {
+                return redirect()->back()->with([
+                    'messege' => __('Login Failed'),
+                    'alert-type' => 'error',
+                ]);
+            }
+
+            $user = UserRepository::findById($socialite->user_id);
+            auth('web')->login($user, true);
+
+            return redirect()->intended(route('student.dashboard'))->with([
+                'messege' => __('Logged in successfully.'),
+                'alert-type' => 'success',
+            ]);
         } catch (\Exception $e) {
             return to_route('login');
         }

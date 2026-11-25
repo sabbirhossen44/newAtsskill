@@ -10,7 +10,16 @@ use Illuminate\Support\Facades\Session;
 if (! function_exists('setting')) {
     function setting(string $key, mixed $default = null): mixed
     {
-        return SettingService::get($key, $default);
+        try {
+            $settings = Cache::rememberForever('site_settings', function () {
+                return Setting::all()->pluck('value', 'key')->map(fn ($value) => is_string($value) ? $value : (string) $value);
+            });
+        } catch (\Throwable) {
+            // Fresh install / commands before migrate: no settings table yet.
+            return $default;
+        }
+
+        return $settings->get($key, $default);
     }
 }
 

@@ -2,7 +2,8 @@
 
 namespace App\Repositories;
 
-use App\Enums\QuizResultStatusEnum;
+use Arafat\LaravelRepository\Repository;
+
 use App\Models\Announcement;
 use App\Models\Course;
 use App\Models\CourseChapterItem;
@@ -13,7 +14,7 @@ use App\Models\QuizQuestion;
 use App\Models\QuizResult;
 use Illuminate\Database\Eloquent\Collection;
 
-class LearningRepository
+class LearningRepository extends Repository
 {
     public static function model()
     {
@@ -156,7 +157,7 @@ class LearningRepository
             'quiz_id' => $quiz->id,
             'result' => json_encode($result),
             'user_grade' => $grad,
-            'status' => $grad >= $quiz->pass_mark ? QuizResultStatusEnum::PASS->value : QuizResultStatusEnum::FAILED->value,
+            'status' => $grad >= $quiz->pass_mark ? 'pass' : 'failed',
         ]);
     }
 

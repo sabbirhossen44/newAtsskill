@@ -3,8 +3,6 @@
 namespace App\Models;
 
 use App\Enums\ChapterStatusEnum;
-use App\Enums\LessonFileTypeEnum;
-use App\Enums\LessonStorageEnum;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -22,9 +20,6 @@ class CourseChapterLesson extends Model
     protected function casts(): array
     {
         return [
-            'storage' => \App\Enums\LessonStorageEnum::class,
-            'file_type' => \App\Enums\LessonFileTypeEnum::class,
-            'status' => \App\Enums\ChapterStatusEnum::class,
             'downloadable' => 'boolean',
             'is_free' => 'boolean',
         ];

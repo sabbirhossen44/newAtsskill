@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Http\Controllers\Concerns\ChecksAdminPermissions;
+use Illuminate\Http\Request;
 use App\Repositories\ContactMessageRepository;
 use Illuminate\Pagination\Paginator;
 
@@ -12,11 +12,8 @@ use Illuminate\Pagination\Paginator;
  */
 class ContactMessageController extends Controller
 {
-    use ChecksAdminPermissions;
-
     public function index()
     {
-        $this->checkAdminPermission('contect.message.view');
         Paginator::useBootstrap();
         $messages = ContactMessageRepository::paginateAdmin(null, $this->perPage(request()));
 
@@ -25,7 +22,6 @@ class ContactMessageController extends Controller
 
     public function show($id)
     {
-        $this->checkAdminPermission('contect.message.view');
         $message = ContactMessageRepository::findByIdOrFail((int) $id);
         $item = $message;
 
@@ -34,10 +30,16 @@ class ContactMessageController extends Controller
 
     public function destroy($id)
     {
-        $this->checkAdminPermission('contect.message.delete');
         $message = ContactMessageRepository::findByIdOrFail((int) $id);
-        ContactMessageRepository::delete($message);
+        $message->delete();
 
-        return redirect()->route('admin.contact-messages')->with(['messege' => __('Deleted successfully'), 'alert-type' => 'success']);
+        return redirect()->route('admin.contact-messages')->with('success', __('Deleted successfully'));
+    }
+
+    private function perPage(Request $request): int
+    {
+        $perPage = (int) $request->input('per_page', 15);
+
+        return in_array($perPage, [10, 25, 50, 100], true) ? $perPage : 15;
     }
 }

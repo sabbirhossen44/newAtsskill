@@ -10,7 +10,7 @@ use Illuminate\View\View;
 
 class BecomeInstructorController extends Controller
 {
-    function index(): View|RedirectResponse
+    public function index(): View|RedirectResponse
     {
         if (InstructorRequestRepository::isApprovedInstructor(auth('web')->user())) {
             return to_route('instructor.dashboard');
@@ -22,7 +22,7 @@ class BecomeInstructorController extends Controller
         return view('frontend.pages.become-instructor', compact('withdrawMethods', 'instructorRequestSetting'));
     }
 
-    function store(BecomeInstructorStoreRequest $request): RedirectResponse
+    public function store(BecomeInstructorStoreRequest $request): RedirectResponse
     {
         InstructorRequestRepository::submitByRequest(
             $request->validated(),

@@ -2,12 +2,14 @@
 
 namespace App\Repositories;
 
+use Arafat\LaravelRepository\Repository;
+
 use App\Models\TeamMember;
 use App\Services\UploadService;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\UploadedFile;
 
-class TeamMemberRepository
+class TeamMemberRepository extends Repository
 {
     public static function model()
     {
@@ -64,7 +66,7 @@ class TeamMemberRepository
         return $updated;
     }
 
-    public static function delete(TeamMember $teamMember): bool
+    public static function deleteRecord(TeamMember $teamMember): bool
     {
         UploadService::delete($teamMember->image);
 

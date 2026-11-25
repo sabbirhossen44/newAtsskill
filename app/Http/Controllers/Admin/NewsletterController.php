@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Http\Controllers\Concerns\ChecksAdminPermissions;
 use App\Jobs\SendMailToNewsletterJob;
 use App\Models\NewsLetter;
 use App\Repositories\NewsLetterRepository;
@@ -17,11 +16,8 @@ use Illuminate\Pagination\Paginator;
  */
 class NewsletterController extends Controller
 {
-    use ChecksAdminPermissions;
-
     public function index(Request $request)
     {
-        $this->checkAdminPermission('newsletter.view');
         Paginator::useBootstrap();
         $subscribers = NewsLetterRepository::paginateAdmin($request->input('keyword'), $this->perPage($request));
         $newsletters = $subscribers;
@@ -31,14 +27,11 @@ class NewsletterController extends Controller
 
     public function create()
     {
-        $this->checkAdminPermission('newsletter.mail');
-
         return view('admin.newsletter.send-mail');
     }
 
     public function store(Request $request)
     {
-        $this->checkAdminPermission('newsletter.mail');
         $request->validate([
             'subject' => 'required|string|max:255',
             'description' => 'required|string',
@@ -46,15 +39,21 @@ class NewsletterController extends Controller
 
         dispatch(new SendMailToNewsletterJob($request->input('subject'), $request->input('description')));
 
-        return redirect()->back()->with(['messege' => __('Mail send successfully'), 'alert-type' => 'success']);
+        return redirect()->back()->with('success', __('Mail send successfully'));
     }
 
     public function destroy($id)
     {
-        $this->checkAdminPermission('newsletter.delete');
         $subscriber = NewsLetterRepository::findByIdOrFail((int) $id);
-        NewsLetterRepository::delete($subscriber);
+        $subscriber->delete();
 
-        return redirect()->back()->with(['messege' => __('Deleted successfully'), 'alert-type' => 'success']);
+        return redirect()->back()->with('success', __('Deleted successfully'));
+    }
+
+    private function perPage(Request $request): int
+    {
+        $perPage = (int) $request->input('per_page', 15);
+
+        return in_array($perPage, [10, 25, 50, 100], true) ? $perPage : 15;
     }
 }
